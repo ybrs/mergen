@@ -1,0 +1,10 @@
+*.pyc
+/web/uploads/
+/web/maintenance.html
+*.swp
+/web/1
+env
+Putio.egg-info/
+.vagrant
+.idea
+.DS_Store
