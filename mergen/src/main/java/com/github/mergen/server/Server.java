@@ -153,10 +153,10 @@ public class Server {
         		server.start();
         		break;
         	} catch (Exception e) {
-        		try {
-        			System.out.println("Retrying....");
+        		try {        			
         			Thread.sleep(timeToWait);
         		} catch (InterruptedException i1) {
+        			// pass 
         		}
         	}
         }        
