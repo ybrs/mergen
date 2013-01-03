@@ -23,6 +23,9 @@ import java.util.concurrent.Executors;
 // import com.github.nedis.pubsub.RedisListener;
 import com.github.nedis.codec.*;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.config.Join;
+import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.client.ClientConfig;
 import com.hazelcast.client.HazelcastClient;
@@ -62,13 +65,25 @@ public class Server {
         this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 
 
-        ClientConfig clientConfig = new ClientConfig();        
-        for (String hzi: jct.hzcluster){            
-            clientConfig.addAddress(hzi);
-        }
+//        ClientConfig clientConfig = new ClientConfig();        
+//        for (String hzi: jct.hzcluster){            
+//            clientConfig.addAddress(hzi);
+//        }
         
-        client = HazelcastClient.newHazelcastClient(clientConfig);    
+//        client = HazelcastClient.newHazelcastClient(clientConfig);    
 
+        Config cfg = new Config();
+        
+        NetworkConfig network = cfg.getNetworkConfig();
+        Join join = network.getJoin();
+        join.getMulticastConfig().setEnabled(true);                
+        join.getTcpIpConfig()
+        	.addMember("127.0.0.1:5701")
+        	.addMember("127.0.0.1:5702")
+        	.setEnabled(true);
+        
+        client = Hazelcast.newHazelcastInstance(cfg);
+        
         /*
         * We build up the dispatcher now !
         * Wish java had mixins
@@ -101,14 +116,19 @@ public class Server {
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
         bootstrap.setPipelineFactory(pipelineFactory);
+        try{        	
+        	Channel channel = bootstrap.bind(new InetSocketAddress(this.host, this.port));
+            if (!channel.isBound()) {
+                this.stop();
+                return false;
+            }
 
-        Channel channel = bootstrap.bind(new InetSocketAddress(this.host, this.port));
-        if (!channel.isBound()) {
-            this.stop();
-            return false;
+            this.channelGroup.add(channel);
+            
+        } catch (org.jboss.netty.channel.ChannelException e){
+        	return false;
         }
-
-        this.channelGroup.add(channel);
+        
         return true;
     }
 
@@ -129,11 +149,13 @@ public class Server {
         System.out.println("listening on: "+ jct_.host + ":" + jct_.port +"");
         System.out.println("Connecting to hazelcast servers "+ jct_.hzcluster);
 
-
         final Server server = new Server(jct_);
+        
         if (!server.start()) {
-            System.exit(-1);
-            return; // not really needed...
+            System.out.println("!!!!!! couldnt start server !!!!!");
+            // TODO: this should fallback to standby server mode, 
+            // if the listening server fails, this should take over imho.
+            return; 
         }
 
         System.out.println("Server started...");
