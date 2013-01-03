@@ -37,111 +37,104 @@ import java.util.*;
 
 public class Server {
 
-    private final String host;
-    private final int port;
-    private DefaultChannelGroup channelGroup;
-    private ServerChannelFactory serverFactory;
+	private final String host;
+	private final int port;
+	private DefaultChannelGroup channelGroup;
+	private ServerChannelFactory serverFactory;
 
-    private ChannelGroup channels;
-    private Timer timer;
+	private ChannelGroup channels;
+	private Timer timer;
 
-    private ServerBootstrap bootstrap;
-    private HazelcastInstance client;    
-    private CommandDispatcher dispatcher;
+	private ServerBootstrap bootstrap;
+	private HazelcastInstance client;
+	private CommandDispatcher dispatcher;
 
-    private ServerCommandLineArguments jct;
+	private ServerCommandLineArguments jct;
+	private ChannelPipelineFactory pipelineFactory;
 
-    public Server(ServerCommandLineArguments jct) {
-        this.host = jct.host;
-        this.port = jct.port;
-        this.jct = jct;
-    }
+	public Server(ServerCommandLineArguments jct) {
+		this.host = jct.host;
+		this.port = jct.port;
+		this.jct = jct;
+	}
 
-    public boolean start() {
-        channels = new DefaultChannelGroup();
-        timer    = new HashedWheelTimer();
-        this.serverFactory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
-                                                               Executors.newCachedThreadPool());
-        this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
+	public void prepareHazelcastCluster() {
 
+	}
 
-//        ClientConfig clientConfig = new ClientConfig();        
-//        for (String hzi: jct.hzcluster){            
-//            clientConfig.addAddress(hzi);
-//        }
-        
-//        client = HazelcastClient.newHazelcastClient(clientConfig);    
+	public void prepare() {
+		channels = new DefaultChannelGroup();
+		timer = new HashedWheelTimer();
+		this.serverFactory = new NioServerSocketChannelFactory(
+				Executors.newCachedThreadPool(),
+				Executors.newCachedThreadPool());
+		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 
-        Config cfg = new Config();
-        
-        NetworkConfig network = cfg.getNetworkConfig();
-        Join join = network.getJoin();
-        join.getMulticastConfig().setEnabled(true);                
-        join.getTcpIpConfig()
-        	.addMember("127.0.0.1:5701")
-        	.addMember("127.0.0.1:5702")
-        	.setEnabled(true);
-        
-        client = Hazelcast.newHazelcastInstance(cfg);
-        
-        /*
-        * We build up the dispatcher now !
-        * Wish java had mixins
-        */        
-        List< Class< ? > > klasses = new ArrayList< Class< ? > >();
-        klasses.add(ServerCommands.class);
-        klasses.add(MapCommands.class);
-        dispatcher = new CommandDispatcher(klasses);                    
+		Config cfg = new Config();
 
-        ChannelPipelineFactory pipelineFactory = new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
+		NetworkConfig network = cfg.getNetworkConfig();
+		Join join = network.getJoin();
+		join.getMulticastConfig().setEnabled(true);
+		join.getTcpIpConfig().addMember("127.0.0.1:5701")
+				.addMember("127.0.0.1:5702").setEnabled(true);
 
-                ServerHandler handler = new ServerHandler(channelGroup);
-                handler.setClient(client);
-                handler.setDispatcher(dispatcher);
+		client = Hazelcast.newHazelcastInstance(cfg);
 
-                ChannelPipeline pipeline = Channels.pipeline();
-                // pipeline.addLast("encoder", Encoder.getInstance());
-                
-                // pipeline.addLast("encoder", Command);
-                pipeline.addLast("decoder", new RedisDecoder());
-                pipeline.addLast("handler",  handler);
-                return pipeline;
-            }
-        };
+		/*
+		 * We build up the dispatcher now ! Wish java had mixins
+		 */
+		List<Class<?>> klasses = new ArrayList<Class<?>>();
+		klasses.add(ServerCommands.class);
+		klasses.add(MapCommands.class);
+		dispatcher = new CommandDispatcher(klasses);
 
-        ServerBootstrap bootstrap = new ServerBootstrap(this.serverFactory);
-        bootstrap.setOption("reuseAddress", true);
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
-        bootstrap.setPipelineFactory(pipelineFactory);
-        try{        	
-        	Channel channel = bootstrap.bind(new InetSocketAddress(this.host, this.port));
-            if (!channel.isBound()) {
-                this.stop();
-                return false;
-            }
+		pipelineFactory = new ChannelPipelineFactory() {
+			@Override
+			public ChannelPipeline getPipeline() throws Exception {
 
-            this.channelGroup.add(channel);
-            
-        } catch (org.jboss.netty.channel.ChannelException e){
-        	return false;
-        }
-        
-        return true;
-    }
+				ServerHandler handler = new ServerHandler(channelGroup);
+				handler.setClient(client);
+				handler.setDispatcher(dispatcher);
 
-    public void stop() {
-        if (this.channelGroup != null) {
-            this.channelGroup.close();
-        }
-        if (this.serverFactory != null) {
-            this.serverFactory.releaseExternalResources();
-        }
-    }
+				ChannelPipeline pipeline = Channels.pipeline();
+				// pipeline.addLast("encoder", Encoder.getInstance());
 
-    public static void main(String[] args) {
+				// pipeline.addLast("encoder", Command);
+				pipeline.addLast("decoder", new RedisDecoder());
+				pipeline.addLast("handler", handler);
+				return pipeline;
+			}
+		};
+
+	}
+
+	public void start() {
+		ServerBootstrap bootstrap = new ServerBootstrap(this.serverFactory);
+		bootstrap.setOption("reuseAddress", true);
+		bootstrap.setOption("child.tcpNoDelay", true);
+		bootstrap.setOption("child.keepAlive", true);
+		bootstrap.setPipelineFactory(pipelineFactory);
+
+		Channel channel = bootstrap.bind(new InetSocketAddress(this.host,
+				this.port));
+		// if (!channel.isBound()) {
+		// this.stop();
+		// }
+
+		this.channelGroup.add(channel);
+
+	}
+
+	public void stop() {
+		if (this.channelGroup != null) {
+			this.channelGroup.close();
+		}
+		if (this.serverFactory != null) {
+			this.serverFactory.releaseExternalResources();
+		}
+	}
+
+	public static void main(String[] args) {
 
         ServerCommandLineArguments jct_ = new ServerCommandLineArguments();    
         new JCommander(jct_, args);
@@ -151,14 +144,24 @@ public class Server {
 
         final Server server = new Server(jct_);
         
-        if (!server.start()) {
-            System.out.println("!!!!!! couldnt start server !!!!!");
-            // TODO: this should fallback to standby server mode, 
-            // if the listening server fails, this should take over imho.
-            return; 
-        }
-
-        System.out.println("Server started...");
+        server.prepare();
+        
+        final long timeToWait = 1000 ;
+        
+        while(true) {
+        	try {
+        		server.start();
+        		break;
+        	} catch (Exception e) {
+        		try {
+        			System.out.println("Retrying....");
+        			Thread.sleep(timeToWait);
+        		} catch (InterruptedException i1) {
+        		}
+        	}
+        }        
+        
+        System.out.println("Mergen Server listening for commands...");
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
