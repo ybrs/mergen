@@ -10,7 +10,7 @@
   <name>mergen</name>
   <url>http://github.com/mergen/</url>
   <description>
-    Hazelcast redis proxy
+    In memory data grid for the rest of us.
   </description>
   <inceptionYear>2012</inceptionYear>
   <developers>

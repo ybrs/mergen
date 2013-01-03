@@ -75,8 +75,10 @@ public class Server {
 		NetworkConfig network = cfg.getNetworkConfig();
 		Join join = network.getJoin();
 		join.getMulticastConfig().setEnabled(true);
-		join.getTcpIpConfig().addMember("127.0.0.1:5701")
-				.addMember("127.0.0.1:5702").setEnabled(true);
+		join.getTcpIpConfig()
+				.addMember("127.0.0.1:5701")
+				.addMember("127.0.0.1:5702")
+				.setEnabled(true);
 
 		client = Hazelcast.newHazelcastInstance(cfg);
 

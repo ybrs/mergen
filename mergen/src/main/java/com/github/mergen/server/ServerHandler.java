@@ -35,7 +35,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
 
     public ServerHandler(ChannelGroup channelGroup) {
         this.channelGroup = channelGroup;        
-        System.out.println(">>> handler");
+        // System.out.println(">>> handler");
     }
 
     public void setClient(HazelcastInstance client){

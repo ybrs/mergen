@@ -6,7 +6,7 @@
   <artifactId>server</artifactId>
   <version>1.0.0</version>
   <name>mergen</name>
-  <description>Hazelcast redis proxy</description>
+  <description>In memory data grid for the rest of us.</description>
   <url>http://github.com/mergen/</url>
   <inceptionYear>2012</inceptionYear>
   <licenses>

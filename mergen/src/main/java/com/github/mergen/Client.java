@@ -1,4 +1,4 @@
-package com.github.mergen.server;
+package com.github.mergen;
 import com.hazelcast.core.Hazelcast;
 import java.util.Map;
 import java.util.Queue;
