@@ -110,11 +110,15 @@ public class Server {
 		
 		System.out.println("getting employeees.....");
 		IMap map = client.getMap("employee");
-		map.put("foo", new Employee("h", 1, true, 10));
-		Set<Employee> employees = (Set<Employee>) map.values(new SqlPredicate("value=foo"));	
+
+		DataHolder dh = new DataHolder();
+		dh.setValue("age", 12);
+		
+		map.put("foo", dh);
+		Set<DataHolder> employees = (Set<DataHolder>) map.values(new SqlPredicate("age=12"));	
 		
 		System.out.println("============ found these ========================");
-		for (Employee employee : employees) {
+		for (DataHolder employee : employees) {
 			System.out.println(employee);
 		}
 		System.out.println("============ // found these ========================");
