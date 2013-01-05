@@ -38,7 +38,7 @@ import java.util.*;
 public class Server {
 
 	private final String host;
-	private final int port;
+	private int port;
 	private DefaultChannelGroup channelGroup;
 	private ServerChannelFactory serverFactory;
 
@@ -71,14 +71,18 @@ public class Server {
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 
 		Config cfg = new Config();
-
+		
+		
+		
 		NetworkConfig network = cfg.getNetworkConfig();
 		Join join = network.getJoin();
 		join.getMulticastConfig().setEnabled(true);
-		join.getTcpIpConfig()
-				.addMember("127.0.0.1:5701")
-				.addMember("127.0.0.1:5702")
-				.setEnabled(true);
+		
+		for (String ns: this.jct.hzcluster) {
+			join.getTcpIpConfig().addMember(ns);
+		} 
+		
+		join.getTcpIpConfig().setEnabled(true);				
 
 		client = Hazelcast.newHazelcastInstance(cfg);
 
@@ -142,28 +146,29 @@ public class Server {
         new JCommander(jct_, args);
 
         System.out.println("listening on: "+ jct_.host + ":" + jct_.port +"");
-        System.out.println("Connecting to hazelcast servers "+ jct_.hzcluster);
 
         final Server server = new Server(jct_);
         
         server.prepare();
         
         final long timeToWait = 1000 ;
-        
+         
+        		
         while(true) {
         	try {
         		server.start();
         		break;
         	} catch (Exception e) {
+        		server.port = server.port + 1;
         		try {        			
-        			Thread.sleep(timeToWait);
+        			Thread.sleep(timeToWait);        		
         		} catch (InterruptedException i1) {
         			// pass 
         		}
         	}
         }        
         
-        System.out.println("Mergen Server listening for commands...");
+        System.out.println("Mergen Server listening for commands..." + server.port);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
