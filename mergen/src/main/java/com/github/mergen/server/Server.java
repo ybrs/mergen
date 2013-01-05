@@ -29,6 +29,8 @@ import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
+import com.hazelcast.query.SqlPredicate;
 
 import com.beust.jcommander.JCommander;
 
@@ -105,6 +107,19 @@ public class Server {
 		join.getTcpIpConfig().setEnabled(true);				
 
 		client = Hazelcast.newHazelcastInstance(cfg);
+		
+		System.out.println("getting employeees.....");
+		IMap map = client.getMap("employee");
+		map.put("foo", new Employee("h", 1, true, 10));
+		Set<Employee> employees = (Set<Employee>) map.values(new SqlPredicate("value=foo"));	
+		
+		System.out.println("============ found these ========================");
+		for (Employee employee : employees) {
+			System.out.println(employee);
+		}
+		System.out.println("============ // found these ========================");
+		
+		System.out.println("getting employeees..... DONE");
 
 		/*
 		 * We build up the dispatcher now ! Wish java had mixins
