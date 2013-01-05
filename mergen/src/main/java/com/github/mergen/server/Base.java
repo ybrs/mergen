@@ -2,8 +2,6 @@ package com.github.mergen.server;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.IMap;
-import com.hazelcast.client.ClientConfig;
-import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
 
 import org.jboss.netty.channel.ChannelHandlerContext;

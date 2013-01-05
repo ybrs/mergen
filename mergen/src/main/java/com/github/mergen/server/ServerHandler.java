@@ -15,8 +15,6 @@ import java.security.SecureRandom;
 import java.util.*;
 
 import com.hazelcast.core.Hazelcast;
-import com.hazelcast.client.ClientConfig;
-import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
 
 import com.github.nedis.codec.MultiBulkReply;

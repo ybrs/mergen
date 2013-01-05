@@ -26,12 +26,13 @@ import com.github.nedis.codec.*;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.Join;
 import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
-import com.hazelcast.client.ClientConfig;
-import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
 
 import com.beust.jcommander.JCommander;
+
+import java.io.FileNotFoundException;
 import java.lang.Class;
 import java.util.*;
 
@@ -70,13 +71,32 @@ public class Server {
 				Executors.newCachedThreadPool());
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 
-		Config cfg = new Config();
 		
+		Config cfg;
 		
+		if (this.jct.configpath != ""){
+			System.out.println("reading config from " + this.jct.configpath);
+				try {
+					cfg = new XmlConfigBuilder(this.jct.configpath).build();
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+					System.out.println("couldnt find config file, proceeding with defaults !!!");
+					cfg = new Config();
+				}
+			System.out.println("reading config from " + this.jct.configpath + " DONE ");
+		} else {
+			cfg = new Config();
+		}
 		
 		NetworkConfig network = cfg.getNetworkConfig();
-		Join join = network.getJoin();
-		join.getMulticastConfig().setEnabled(true);
+		Join join = network.getJoin();		
+		
+		if ((this.jct.multicastgroup!="") && (this.jct.multicastport>0)){
+			join.getMulticastConfig()
+				.setMulticastGroup(this.jct.multicastgroup)
+				.setMulticastPort(this.jct.multicastport)
+				.setEnabled(true);
+		}		
 		
 		for (String ns: this.jct.hzcluster) {
 			join.getTcpIpConfig().addMember(ns);
@@ -112,6 +132,11 @@ public class Server {
 			}
 		};
 
+	}
+
+	private XmlConfigBuilder XmlConfigBuilder(String configpath) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	public void start() {
