@@ -112,10 +112,9 @@ public class Server {
 		IMap map = client.getMap("employee");
 
 		DataHolder dh = new DataHolder();
-		dh.setValue("age", 12);
-		
+		dh.setValue("age", 12);		
 		map.put("foo", dh);
-		Set<DataHolder> employees = (Set<DataHolder>) map.values(new SqlPredicate("age=12"));	
+		Set<DataHolder> employees = (Set<DataHolder>) map.values(new SqlPredicate("agez=12"));	
 		
 		System.out.println("============ found these ========================");
 		for (DataHolder employee : employees) {
@@ -131,6 +130,7 @@ public class Server {
 		List<Class<?>> klasses = new ArrayList<Class<?>>();
 		klasses.add(ServerCommands.class);
 		klasses.add(MapCommands.class);
+		klasses.add(MapObjectCommands.class);
 		dispatcher = new CommandDispatcher(klasses);
 
 		pipelineFactory = new ChannelPipelineFactory() {

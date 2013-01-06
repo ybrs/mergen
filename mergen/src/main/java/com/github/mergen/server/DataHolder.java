@@ -9,6 +9,14 @@ public class DataHolder implements Serializable {
 	public DataHolder() {
 		this.map = new HashMap<String, Object>();
 	}
+	
+	public DataHolder(HashMap<String, Object> h){
+		this.map = h;
+	}
+	
+	public HashMap<String, Object> getHashmap(){
+		return this.map;
+	}
 
 	public void setValue(String k, Object v){
 		this.map.put(k, v);
