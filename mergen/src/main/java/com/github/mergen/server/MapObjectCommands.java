@@ -10,6 +10,7 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -32,28 +33,53 @@ public class MapObjectCommands extends Controller {
 	 * this is basically the same thing with maps but
 	 * stores and retrieves json objects - and you can query on
 	 * them.
+	 * 
+	 * 	
+	 * remember hashes/maps are not ordered lists (so its like that in redis too)
+	 * 
+	 * 
 	 */
+
+	@RedisCommand(cmd = "OHDUMMY", returns = "OK")
+	public void ohdummy(MessageEvent e, Object[] args) {
+		String map = new String((byte[]) args[1]);
+		String k = new String((byte[]) args[2]);
+		String v = new String((byte[]) args[3]);
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			HashMap<String,Object> jsonData = mapper.readValue(v, HashMap.class);
+		} catch (JsonParseException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (JsonMappingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+	}
+	
+	@RedisCommand(cmd = "OHDUMMY2", returns = "OK")
+	public void ohdummy2(MessageEvent e, Object[] args) {
+		String map = new String((byte[]) args[1]);
+		String k = new String((byte[]) args[2]);
+		String v = new String((byte[]) args[3]);
+	}
+
 	
 	@RedisCommand(cmd = "OHSET", returns = "OK")
 	public void hset(MessageEvent e, Object[] args) {
 		String map = new String((byte[]) args[1]);
 		String k = new String((byte[]) args[2]);
 		String v = new String((byte[]) args[3]);
-		
-		System.out.println(">>>>>>>> " + v);
-		
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			HashMap<String,Object> jsonData = mapper.readValue(v, HashMap.class);
-			System.out.println(jsonData);
-
-			DataHolder dh = new DataHolder(jsonData);
-			
-			
+			DataHolder dh = new DataHolder(jsonData);			
 			IMap<String, DataHolder> kvstore = base.client.getMap(map);
-			kvstore.set(k, dh, 0, TimeUnit.SECONDS);
-		
-		
+			kvstore.set(k, dh, 0, TimeUnit.SECONDS);			
 		} catch (JsonParseException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();

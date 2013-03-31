@@ -21,7 +21,12 @@ import com.github.nedis.codec.CommandArgs;
 import java.nio.charset.Charset;
 
 public class MapCommands extends Controller {
-
+	/**
+	 * remember hashes/maps are not ordered lists (so its like that in redis too)
+	 * 
+	 */
+	
+	
 	@RedisCommand(cmd = "HSET", returns = "OK")
 	public void hset(MessageEvent e, Object[] args) {
 		String map = new String((byte[]) args[1]);

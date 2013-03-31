@@ -64,11 +64,12 @@ public class CommandDispatcher {
 
 	public void dispatch(Controller controller, MessageEvent e, Object[] args){		
 		String cmd = new String((byte[])args[0]);
-		MethodElem m = methodmap.get(cmd);
-
-		if (m==null){
+		MethodElem m = methodmap.get(cmd.toUpperCase());
+			
+		if (m==null){			
             ServerReply sr = new ServerReply();
-            e.getChannel().write(sr.replyError("method not implemented"));
+            e.getChannel().write(sr.replyError("method not implemented - " + cmd));
+            System.out.println("[" + cmd + "] received");
 			return;
 		}
 

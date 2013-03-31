@@ -105,25 +105,8 @@ public class Server {
 		} 
 		
 		join.getTcpIpConfig().setEnabled(true);				
-
 		client = Hazelcast.newHazelcastInstance(cfg);
 		
-		System.out.println("getting employeees.....");
-		IMap map = client.getMap("employee");
-
-		DataHolder dh = new DataHolder();
-		dh.setValue("age", 12);		
-		map.put("foo", dh);
-		Set<DataHolder> employees = (Set<DataHolder>) map.values(new SqlPredicate("agez=12"));	
-		
-		System.out.println("============ found these ========================");
-		for (DataHolder employee : employees) {
-			System.out.println(employee);
-		}
-		System.out.println("============ // found these ========================");
-		
-		System.out.println("getting employeees..... DONE");
-
 		/*
 		 * We build up the dispatcher now ! Wish java had mixins
 		 */
@@ -189,7 +172,7 @@ public class Server {
         ServerCommandLineArguments jct_ = new ServerCommandLineArguments();    
         new JCommander(jct_, args);
 
-        System.out.println("listening on: "+ jct_.host + ":" + jct_.port +"");
+        System.out.println("listening on "+ jct_.host + ":" + jct_.port +"");
 
         final Server server = new Server(jct_);
         
@@ -212,7 +195,7 @@ public class Server {
         	}
         }        
         
-        System.out.println("Mergen Server listening for commands..." + server.port);
+        System.out.println("Mergen Server listening for commands on " + server.port);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override

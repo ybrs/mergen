@@ -8,7 +8,7 @@
   <packaging>jar</packaging>
 
   <name>mergen</name>
-  <url>http://github.com/mergen/</url>
+  <url>http://github.com/ybrs/mergen/</url>
   <description>
     In memory data grid for the rest of us.
   </description>
@@ -70,6 +70,8 @@
       <version>2.4.2-SNAPSHOT</version>
     </dependency>
   
+    
+    
     <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
