@@ -23,12 +23,11 @@ import java.nio.charset.Charset;
 public class PubSubCommands extends Controller {
 	
 	@RedisCommand(cmd = "SUBSCRIBE")
-	public void hset(MessageEvent e, Object[] args) {
+	public void subscribe(MessageEvent e, Object[] args) {
 
-		Set<ChannelHandlerContext> contexts = this.base.getPubSubList().get(this.base.getIdentifier());		
-		if (contexts == null) {
-			contexts = new HashSet<ChannelHandlerContext>();
-			this.base.getPubSubList().put(this.base.getIdentifier(), contexts);
+		Controller controller = this.base.getPubSubList().get(this.base.getIdentifier());		
+		if (controller == null) {			
+			this.base.getPubSubList().put(this.base.getIdentifier(), this);
 		}					
 		
 		// do nothing for now...
@@ -45,6 +44,26 @@ public class PubSubCommands extends Controller {
 		System.out.println("subscribers are: ...");
 		for (String k : this.base.getPubSubList().keySet()) {
 			System.out.println(">>>>" + k);
+		}
+		
+	}
+	
+	@RedisCommand(cmd = "PUBLISH", returns = "OK")
+	public void publish(MessageEvent e, Object[] args) {
+
+		String v = new String((byte[]) args[0]);
+		
+		for (String key : this.base.getPubSubList().keySet()) {
+			Controller c = this.base.getPubSubList().get(key);
+			System.out.println(">>>>" + key);
+			ServerReply sr = new ServerReply();
+			ServerReply.MultiReply mr = sr.startMultiReply();
+			mr.addString("type");
+			mr.addString("pattern");
+			mr.addString("channel");
+			mr.addString(v);
+			mr.finish();
+			c.context.getChannel().write(mr.getBuffer());
 		}
 		
 	}

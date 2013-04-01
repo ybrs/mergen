@@ -29,7 +29,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     private CommandDispatcher dispatcher;
     private Controller controller;
     public Base base;
-	private Map<String, Set<ChannelHandlerContext>> pubsublist;
+	private Map<String, Controller> pubsublist;
 
     public ServerHandler(ChannelGroup channelGroup) {
         this.channelGroup = channelGroup;        
@@ -75,6 +75,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             Constructor co = klass.getConstructor();
             controller = (Controller)co.newInstance();
             controller.base = base;
+            controller.context = ctx;
 
             if (size > 0){
                 // System.out.println(args[0]);
@@ -91,7 +92,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-	public void setPubSubList(Map<String, Set<ChannelHandlerContext>> subscriptions) {
+	public void setPubSubList(Map<String, Controller> subscriptions) {
 		this.pubsublist = subscriptions;
 		this.base.setPubSubList(subscriptions);
 		this.base.setIdentifier(subscriptions.size() + 1);

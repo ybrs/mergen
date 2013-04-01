@@ -26,7 +26,7 @@ class Base {
 	 */
 	public boolean authenticated = false;
 	public HazelcastInstance client;
-	private Map<String, Set<ChannelHandlerContext>> pubsublist;
+	private Map<String, Controller> pubsublist;
 	private String identifier;
 
 	public Base(HazelcastInstance client) {
@@ -45,11 +45,11 @@ class Base {
 		return authenticated;
 	}
 
-	public Map<String, Set<ChannelHandlerContext>> getPubSubList(){
+	public Map<String, Controller> getPubSubList(){
 		return this.pubsublist;
 	}
 	
-	public void setPubSubList(Map<String, Set<ChannelHandlerContext>> subscriptions) {
+	public void setPubSubList(Map<String, Controller> subscriptions) {
 		this.pubsublist = subscriptions;		
 	}
 

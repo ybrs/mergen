@@ -122,7 +122,8 @@ public class Server {
 		klasses.add(PubSubCommands.class);
 		dispatcher = new CommandDispatcher(klasses);
 
-		final Map<String, Set<ChannelHandlerContext>> subscriptions = new ConcurrentHashMap<String, Set<ChannelHandlerContext>>();
+		
+		final Map<String, Controller> subscriptions = new ConcurrentHashMap<String, Controller>();
 		
 		
 		pipelineFactory = new ChannelPipelineFactory() {
@@ -132,8 +133,7 @@ public class Server {
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
-				handler.setPubSubList(subscriptions);
-								
+				handler.setPubSubList(subscriptions);								
 				
 				ChannelPipeline pipeline = Channels.pipeline();
 				// pipeline.addLast("encoder", Encoder.getInstance());
