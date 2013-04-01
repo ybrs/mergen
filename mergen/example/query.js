@@ -17,3 +17,7 @@ client.send_command("GET", ["mykey"], redis.print);
 var myobj = {id: 3, name: 'foo'}
 client.send_command("OHSET", ["myobjects", "fromnode", JSON.stringify(myobj)]);
 client.send_command("OHGET", ["myobjects", "fromnode"], redis.print);
+
+setInterval(function(){ 
+	client.send_command("OHGET", ["myobjects", "fromnode"], redis.print);
+}, 1000);

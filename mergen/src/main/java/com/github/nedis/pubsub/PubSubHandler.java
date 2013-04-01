@@ -18,6 +18,7 @@ public class PubSubHandler extends SimpleChannelHandler {
     public PubSubHandler(List<RedisListener> listeners) {
         this.listeners = listeners;
     }
+    
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws java.lang.Exception {
 

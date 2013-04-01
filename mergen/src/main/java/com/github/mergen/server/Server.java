@@ -16,12 +16,15 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 import java.net.InetSocketAddress;
+
 import java.util.concurrent.Executors;
 
 // import com.github.nedis.pubsub.RedisListener;
 import com.github.nedis.codec.*;
+import com.github.nedis.pubsub.RedisListener;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.Join;
@@ -55,6 +58,8 @@ public class Server {
 	private ServerCommandLineArguments jct;
 	private ChannelPipelineFactory pipelineFactory;
 
+	// public List<RedisListener> listeners;	
+	
 	public Server(ServerCommandLineArguments jct) {
 		this.host = jct.host;
 		this.port = jct.port;
@@ -72,7 +77,7 @@ public class Server {
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
-
+		
 		
 		Config cfg;
 		
@@ -114,8 +119,12 @@ public class Server {
 		klasses.add(ServerCommands.class);
 		klasses.add(MapCommands.class);
 		klasses.add(MapObjectCommands.class);
+		klasses.add(PubSubCommands.class);
 		dispatcher = new CommandDispatcher(klasses);
 
+		final Map<String, Set<ChannelHandlerContext>> subscriptions = new ConcurrentHashMap<String, Set<ChannelHandlerContext>>();
+		
+		
 		pipelineFactory = new ChannelPipelineFactory() {
 			@Override
 			public ChannelPipeline getPipeline() throws Exception {
@@ -123,17 +132,18 @@ public class Server {
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
-
+				handler.setPubSubList(subscriptions);
+								
+				
 				ChannelPipeline pipeline = Channels.pipeline();
 				// pipeline.addLast("encoder", Encoder.getInstance());
-
 				// pipeline.addLast("encoder", Command);
 				pipeline.addLast("decoder", new RedisDecoder());
 				pipeline.addLast("handler", handler);
 				return pipeline;
 			}
 		};
-
+				
 	}
 
 	private XmlConfigBuilder XmlConfigBuilder(String configpath) {

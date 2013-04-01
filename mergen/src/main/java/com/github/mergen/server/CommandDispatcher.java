@@ -63,20 +63,23 @@ public class CommandDispatcher {
 	}
 
 	public void dispatch(Controller controller, MessageEvent e, Object[] args){		
-		String cmd = new String((byte[])args[0]);
-		MethodElem m = methodmap.get(cmd.toUpperCase());
-			
+		String cmd = new String((byte[])args[0]);			
+		
+		MethodElem m = methodmap.get(cmd.toUpperCase());					
+		
 		if (m==null){			
             ServerReply sr = new ServerReply();
-            e.getChannel().write(sr.replyError("method not implemented - " + cmd));
-            System.out.println("[" + cmd + "] received");
+            e.getChannel().write(sr.replyError("method not implemented - " + cmd));            
 			return;
 		}
 
-		if (m.annot.authenticate() && !controller.base.isAuthenticated()){
-            ServerReply sr = new ServerReply();
-            e.getChannel().write(sr.replyError("You need to authenticate"));
-            return;
+		boolean AUTH_IS_ON = false;
+		if (AUTH_IS_ON){
+			if (m.annot.authenticate() && !controller.base.isAuthenticated()){
+	            ServerReply sr = new ServerReply();
+	            e.getChannel().write(sr.replyError("You need to authenticate"));
+	            return;
+			}
 		}
 
 		

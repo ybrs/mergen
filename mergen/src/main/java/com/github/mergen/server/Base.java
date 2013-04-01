@@ -26,6 +26,8 @@ class Base {
 	 */
 	public boolean authenticated = false;
 	public HazelcastInstance client;
+	private Map<String, Set<ChannelHandlerContext>> pubsublist;
+	private String identifier;
 
 	public Base(HazelcastInstance client) {
 		/**
@@ -33,11 +35,30 @@ class Base {
 		 * lock owners since we are a proxy, imho, practically this doesnt
 		 * change anything, revisit after pub/sub/topic...
 		 **/
+		
+		System.out.println("new base...");
+		
 		this.client = client;
 	}
 
 	public boolean isAuthenticated() {
 		return authenticated;
+	}
+
+	public Map<String, Set<ChannelHandlerContext>> getPubSubList(){
+		return this.pubsublist;
+	}
+	
+	public void setPubSubList(Map<String, Set<ChannelHandlerContext>> subscriptions) {
+		this.pubsublist = subscriptions;		
+	}
+
+	public void setIdentifier(int cnt){		
+		this.identifier = Integer.toString(cnt);
+	}
+	
+	public String getIdentifier() {
+		return this.identifier;
 	}
 
 }

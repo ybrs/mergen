@@ -17,7 +17,6 @@ import java.util.*;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 
-import com.github.nedis.codec.MultiBulkReply;
 import com.github.nedis.codec.*;
 
 
@@ -30,10 +29,11 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     private CommandDispatcher dispatcher;
     private Controller controller;
     public Base base;
+	private Map<String, Set<ChannelHandlerContext>> pubsublist;
 
     public ServerHandler(ChannelGroup channelGroup) {
         this.channelGroup = channelGroup;        
-        // System.out.println(">>> handler");
+        System.out.println(">>> handler");
     }
 
     public void setClient(HazelcastInstance client){
@@ -63,6 +63,12 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             if (klass==null){
                 ServerReply sr = new ServerReply();
                 e.getChannel().write(sr.replyError("method not implemented"));
+                
+                for (int i = 0; i < args.length; i++) {
+					System.out.println("received >>> ");
+					String mcmd = new String((byte[])args[i]);
+					System.out.println(mcmd);
+				}
                 return;
             }
 
@@ -84,4 +90,18 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             e.getChannel().write(sr.replyOK());
         }
     }
+
+	public void setPubSubList(Map<String, Set<ChannelHandlerContext>> subscriptions) {
+		this.pubsublist = subscriptions;
+		this.base.setPubSubList(subscriptions);
+		this.base.setIdentifier(subscriptions.size() + 1);
+	}
+	
+	@Override
+	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+		System.out.println("Disconnected >>> " + this.base.getIdentifier());
+		this.pubsublist.remove(this.base.getIdentifier());
+	}
+
+	
 }
