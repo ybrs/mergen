@@ -135,6 +135,10 @@ public class Server {
 				
 				cnt = cnt + 1;
 				
+				if (cnt > Long.MAX_VALUE - 1){
+					cnt = 0;
+				}
+				
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
