@@ -8,4 +8,4 @@ print "setted"
 pubsub = r.pubsub()
 pubsub.subscribe("foo")
 for msg in pubsub.listen():
-    print msg
+    print "received >>>", msg

@@ -10,6 +10,7 @@ import org.jboss.netty.channel.Channels;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
+import java.math.BigInteger;
 
 import java.security.SecureRandom;
 import java.util.*;
@@ -24,8 +25,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
 
     private final ChannelGroup channelGroup;    
     private HazelcastInstance client;
-
-    
     private CommandDispatcher dispatcher;
     private Controller controller;
     public Base base;
@@ -92,10 +91,14 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-	public void setPubSubList(Map<String, Controller> subscriptions) {
+	public void setPubSubList(Map<String, Controller> subscriptions, long cnt) {
+		
+		System.out.println("====== cnt =====");
+		System.out.println(cnt);
+				
 		this.pubsublist = subscriptions;
 		this.base.setPubSubList(subscriptions);
-		this.base.setIdentifier(subscriptions.size() + 1);
+		this.base.setIdentifier(cnt);
 	}
 	
 	@Override

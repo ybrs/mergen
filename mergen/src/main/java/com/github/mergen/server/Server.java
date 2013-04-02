@@ -50,7 +50,9 @@ public class Server {
 
 	private ChannelGroup channels;
 	private Timer timer;
-
+	
+	private long cnt = 0;
+	
 	private ServerBootstrap bootstrap;
 	private HazelcastInstance client;
 	private CommandDispatcher dispatcher;
@@ -64,6 +66,7 @@ public class Server {
 		this.host = jct.host;
 		this.port = jct.port;
 		this.jct = jct;
+		System.out.println("init");
 	}
 
 	public void prepareHazelcastCluster() {
@@ -71,6 +74,7 @@ public class Server {
 	}
 
 	public void prepare() {
+		System.out.println("prepare");
 		channels = new DefaultChannelGroup();
 		timer = new HashedWheelTimer();
 		this.serverFactory = new NioServerSocketChannelFactory(
@@ -125,15 +129,16 @@ public class Server {
 		
 		final Map<String, Controller> subscriptions = new ConcurrentHashMap<String, Controller>();
 		
-		
 		pipelineFactory = new ChannelPipelineFactory() {
 			@Override
 			public ChannelPipeline getPipeline() throws Exception {
-
+				
+				cnt = cnt + 1;
+				
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
-				handler.setPubSubList(subscriptions);								
+				handler.setPubSubList(subscriptions, cnt);								
 				
 				ChannelPipeline pipeline = Channels.pipeline();
 				// pipeline.addLast("encoder", Encoder.getInstance());

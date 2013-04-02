@@ -47,15 +47,23 @@ public class PubSubCommands extends Controller {
 		}
 		
 	}
+
+	@RedisCommand(cmd = "SUBSCRIBERS", returns = "OK")
+	public void showsubscribers(MessageEvent e, Object[] args) {
+		System.out.println("subscribers are: ...");
+		for (String k : this.base.getPubSubList().keySet()) {
+			System.out.println(">>>>" + k);
+		}
+	}
 	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
 	public void publish(MessageEvent e, Object[] args) {
 
-		String v = new String((byte[]) args[0]);
+		String v = new String((byte[]) args[2]);
 		
 		for (String key : this.base.getPubSubList().keySet()) {
 			Controller c = this.base.getPubSubList().get(key);
-			System.out.println(">>>>" + key);
+			System.out.println("pushing to >>>>" + key);
 			ServerReply sr = new ServerReply();
 			ServerReply.MultiReply mr = sr.startMultiReply();
 			mr.addString("type");

@@ -53,12 +53,12 @@ class Base {
 		this.pubsublist = subscriptions;		
 	}
 
-	public void setIdentifier(int cnt){		
-		this.identifier = Integer.toString(cnt);
+	public void setIdentifier(long cnt){		
+		this.identifier = Long.toString(cnt);
 	}
 	
 	public String getIdentifier() {
 		return this.identifier;
 	}
-
+	
 }
