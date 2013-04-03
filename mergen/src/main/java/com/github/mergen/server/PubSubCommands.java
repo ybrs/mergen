@@ -27,30 +27,29 @@ public class PubSubCommands extends Controller {
 	
 	@RedisCommand(cmd = "SUBSCRIBE")
 	public void subscribe(MessageEvent e, Object[] args) {
-
 		Controller controller = this.base.getPubSubList().get(this.base.getIdentifier());		
 		if (controller == null) {			
 			this.base.getPubSubList().put(this.base.getIdentifier(), this);
 		}					
 		
-		// do nothing for now...
-		int listenercnt = 1;
-		String channelname = new String((byte[]) args[1]);
 		ServerReply sr = new ServerReply();
 		ServerReply.MultiReply mr = sr.startMultiReply();
-		mr.addString("subscribe");
-		mr.addString(channelname);
-		mr.addInt(listenercnt);
+		
+		for (int i = 1; i < args.length; i++) {
+			Object object  = args[i];
+			String channelname = new String((byte[]) object);
+			this.base.subscriptioncnt += 1;
+	        ITopic topic = this.base.client.getTopic(channelname);
+	        topic.addMessageListener(this.base);
+	        mr.addString("subscribe");
+	        mr.addString(channelname);
+		}				
+		// mr.addString(Integer.toBinaryString(this.base.subscriptioncnt));
+		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
+		System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));
 		
-		System.out.println("subscribers are: ...");
-		for (String k : this.base.getPubSubList().keySet()) {
-			System.out.println(">>>>" + k);
-		}
-		
-        ITopic topic = this.base.client.getTopic ("default");
-        topic.addMessageListener(this.base);        
 	}
 
 	@RedisCommand(cmd = "SUBSCRIBERS", returns = "OK")
@@ -63,25 +62,10 @@ public class PubSubCommands extends Controller {
 	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
 	public void publish(MessageEvent e, Object[] args) {
-
 		String v = new String((byte[]) args[2]);
-		
-//		for (String key : this.base.getPubSubList().keySet()) {
-//			Controller c = this.base.getPubSubList().get(key);
-//			System.out.println("pushing to >>>>" + key);
-//			ServerReply sr = new ServerReply();
-//			ServerReply.MultiReply mr = sr.startMultiReply();
-//			mr.addString("type");
-//			mr.addString("pattern");
-//			mr.addString("channel");
-//			mr.addString(v);
-//			mr.finish();
-//			c.context.getChannel().write(mr.getBuffer());
-//		}
-
-		
-        ITopic topic = this.base.client.getTopic ("default");
-        TopicMessage msg = new TopicMessage(v, this.base.getIdentifier());
+		String channelname = new String((byte[]) args[1]);
+        ITopic topic = this.base.client.getTopic(channelname);
+        TopicMessage msg = new TopicMessage(v, this.base.getIdentifier(), "message", channelname);
         topic.publish(msg);        
 
 	}

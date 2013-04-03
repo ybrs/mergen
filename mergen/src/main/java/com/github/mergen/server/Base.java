@@ -30,6 +30,7 @@ class Base implements MessageListener<TopicMessage> {
 	public HazelcastInstance client;
 	private Map<String, Controller> pubsublist;
 	private String identifier;
+	public int subscriptioncnt = 0;
 
 	public Base(HazelcastInstance client) {
 		/**
@@ -66,19 +67,16 @@ class Base implements MessageListener<TopicMessage> {
 	@Override
 	public void onMessage(Message<TopicMessage> msg) {
 		System.out.println("message received " + msg);
-		
 		TopicMessage tm = msg.getMessageObject();
 		Controller c = this.pubsublist.get(this.getIdentifier());
 		System.out.println("pushing to >>>>" + this.getIdentifier());
 		ServerReply sr = new ServerReply();
 		ServerReply.MultiReply mr = sr.startMultiReply();
-		mr.addString("type");
-		mr.addString("pattern");
-		mr.addString("channel");
+		mr.addString("message");
+		mr.addString(tm.getChannel());
 		mr.addString(tm.getStr());
 		mr.finish();
-		c.context.getChannel().write(mr.getBuffer());
-		
+		c.context.getChannel().write(mr.getBuffer());		
 	}
 
 	

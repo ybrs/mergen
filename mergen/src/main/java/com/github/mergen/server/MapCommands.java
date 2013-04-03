@@ -74,7 +74,6 @@ public class MapCommands extends Controller {
 
 		for (int i = 2; i < args.length; i++) {
 			String k = new String((byte[]) args[i]);
-			System.out.println("adding >" + k);
 			keys.add(k);
 		}
 
@@ -84,19 +83,14 @@ public class MapCommands extends Controller {
 		ServerReply.MultiReply mr = sr.startMultiReply();
 
 		for (String val : keys) {
-			System.out.println(">>>>> " + val + " : " + r.get(val));
 			if (r.get(val) == null) {
 				mr.addNull();
 			} else {
 				mr.addString(r.get(val));
 			}
-
 		}
 		mr.finish();
-		// System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));
 		e.getChannel().write(mr.getBuffer());
-		// ServerReply sr = new ServerReply();
-		// e.getChannel().write(sr.replyMulti(array));
 	}
 
 	@RedisCommand(cmd = "HDEL")
