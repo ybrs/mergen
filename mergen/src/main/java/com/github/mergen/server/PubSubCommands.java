@@ -3,6 +3,9 @@ package com.github.mergen.server;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ITopic;
+import com.hazelcast.core.Message;
+import com.hazelcast.core.MessageListener;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -46,6 +49,8 @@ public class PubSubCommands extends Controller {
 			System.out.println(">>>>" + k);
 		}
 		
+        ITopic topic = this.base.client.getTopic ("default");
+        topic.addMessageListener(this.base);        
 	}
 
 	@RedisCommand(cmd = "SUBSCRIBERS", returns = "OK")
@@ -61,20 +66,24 @@ public class PubSubCommands extends Controller {
 
 		String v = new String((byte[]) args[2]);
 		
-		for (String key : this.base.getPubSubList().keySet()) {
-			Controller c = this.base.getPubSubList().get(key);
-			System.out.println("pushing to >>>>" + key);
-			ServerReply sr = new ServerReply();
-			ServerReply.MultiReply mr = sr.startMultiReply();
-			mr.addString("type");
-			mr.addString("pattern");
-			mr.addString("channel");
-			mr.addString(v);
-			mr.finish();
-			c.context.getChannel().write(mr.getBuffer());
-		}
-		
-	}
+//		for (String key : this.base.getPubSubList().keySet()) {
+//			Controller c = this.base.getPubSubList().get(key);
+//			System.out.println("pushing to >>>>" + key);
+//			ServerReply sr = new ServerReply();
+//			ServerReply.MultiReply mr = sr.startMultiReply();
+//			mr.addString("type");
+//			mr.addString("pattern");
+//			mr.addString("channel");
+//			mr.addString(v);
+//			mr.finish();
+//			c.context.getChannel().write(mr.getBuffer());
+//		}
 
+		
+        ITopic topic = this.base.client.getTopic ("default");
+        TopicMessage msg = new TopicMessage(v, this.base.getIdentifier());
+        topic.publish(msg);        
+
+	}
 
 }

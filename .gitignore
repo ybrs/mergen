@@ -3,6 +3,7 @@
 /web/uploads/
 /web/maintenance.html
 *.swp
+dump.*
 /web/1
 env
 Putio.egg-info/

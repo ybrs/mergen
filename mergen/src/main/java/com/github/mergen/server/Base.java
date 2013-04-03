@@ -3,6 +3,8 @@ package com.github.mergen.server;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.Message;
+import com.hazelcast.core.MessageListener;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -18,7 +20,7 @@ import java.util.concurrent.*;
 
 import com.github.nedis.codec.CommandArgs;
 
-class Base {
+class Base implements MessageListener<TopicMessage> {
 	/**
 	 * we init this once for every connection, so you can use it like a session,
 	 * see auth
@@ -60,5 +62,24 @@ class Base {
 	public String getIdentifier() {
 		return this.identifier;
 	}
+
+	@Override
+	public void onMessage(Message<TopicMessage> msg) {
+		System.out.println("message received " + msg);
+		
+		TopicMessage tm = msg.getMessageObject();
+		Controller c = this.pubsublist.get(this.getIdentifier());
+		System.out.println("pushing to >>>>" + this.getIdentifier());
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+		mr.addString("type");
+		mr.addString("pattern");
+		mr.addString("channel");
+		mr.addString(tm.getStr());
+		mr.finish();
+		c.context.getChannel().write(mr.getBuffer());
+		
+	}
+
 	
 }
