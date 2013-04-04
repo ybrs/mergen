@@ -9,7 +9,9 @@ pubsub = r.pubsub()
 
 # r.execute_command("SUBSCRIBE", "ccc", "bar")
 
-pubsub.subscribe("foo")
+pubsub.unsubscribe(["foo", "bar"])
+
+pubsub.subscribe(["foo", "bar"])
 print "sent subsc"
 for msg in pubsub.listen():
     print "in listen mode"

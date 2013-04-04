@@ -94,8 +94,7 @@ class ServerReply {
         }
 
         public MultiReply addInt(int i){
-        	buffer.writeBytes(":".getBytes());        	
-        	buffer.writeBytes(Integer.toBinaryString(i).getBytes());        	
+        	buffer.writeBytes((":" + i).getBytes());        	
         	buffer.writeBytes("\r\n".getBytes());
             elemcnt++;
             return this;
