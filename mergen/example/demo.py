@@ -1,7 +1,7 @@
 import redis
 from time import sleep
 
-pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
+#pool = redis.ConnectionPool(host='localhost', port=6380, db=0)
 
 r = redis.Redis(port=6380)
 r.execute_command("AUTH", "foo", "bar")

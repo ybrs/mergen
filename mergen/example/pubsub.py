@@ -1,5 +1,5 @@
 import redis
-r = redis.Redis(port=6380)
+r = redis.Redis(port=6381)
 #r = redis.Redis()
 
 #r.set("foo", "bar")
@@ -9,7 +9,7 @@ pubsub = r.pubsub()
 
 # r.execute_command("SUBSCRIBE", "ccc", "bar")
 
-pubsub.unsubscribe(["foo", "bar"])
+# pubsub.unsubscribe(["foo", "bar"])
 
 pubsub.subscribe(["foo", "bar"])
 print "sent subsc"
