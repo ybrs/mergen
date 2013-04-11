@@ -122,6 +122,7 @@ public class Server {
 		List<Class<?>> klasses = new ArrayList<Class<?>>();
 		klasses.add(ServerCommands.class);
 		klasses.add(MapCommands.class);
+		klasses.add(ListCommands.class);
 		klasses.add(MapObjectCommands.class);
 		klasses.add(PubSubCommands.class);
 		dispatcher = new CommandDispatcher(klasses);

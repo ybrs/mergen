@@ -74,6 +74,13 @@ class TestSequenceFunctions(unittest.TestCase):
             p = True
         assert p
 
+    def test_lists(self):
+        r = redis.StrictRedis(host='localhost', password="bar", port=6380, db=0)
+        for i in range(1, 100):
+            r.rpush("foo", i)
+        vals = r.execute_command("LGETALL", "foo")
+        print vals
+        assert vals[0] == "1"    
 
 if __name__ == '__main__':
     unittest.main()
