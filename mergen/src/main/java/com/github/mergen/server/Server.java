@@ -100,6 +100,13 @@ public class Server {
 		}
 		
 		NetworkConfig network = cfg.getNetworkConfig();
+		
+		if (this.jct.publicipaddress != ""){
+			System.out.println("setting public ip address: " + this.jct.publicipaddress);
+			network.setPublicAddress(this.jct.publicipaddress);
+		}
+		
+		
 		Join join = network.getJoin();		
 		
 		if ((this.jct.multicastgroup!="") && (this.jct.multicastport>0)){

@@ -24,5 +24,9 @@ public class ServerCommandLineArguments {
 
 	  @Parameter(names = "-p", description = "Listening interface port")
 	  public Integer port = 6380;
+	  
+	  @Parameter(names = "-publicipaddress", description = "Public ip address")
+	  public String publicipaddress = "";
+	  
 
 }
