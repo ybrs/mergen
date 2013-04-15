@@ -26,19 +26,60 @@ import com.github.nedis.codec.CommandArgs;
 import java.nio.charset.Charset;
 
 public class ListCommands extends Controller {
+
+	@RedisCommand(cmd = "LCLEAR", returns = "OK")
+	public void clear(MessageEvent e, Object[] args) {
+		String listname = new String((byte[]) args[1]);
+		IList<String> list = base.client.getList(listname);
+		list.clear();
+	}
+	
 	
 	@RedisCommand(cmd = "RPUSH", returns = "OK")
 	public void rpush(MessageEvent e, Object[] args) {
 		String listname = new String((byte[]) args[1]);
 		String v = new String((byte[]) args[2]);
 		IList<String> list = base.client.getList(listname);
-		
-//		Transaction txn1 = base.client.getTransaction();
-//		txn1.begin();
 		list.add(v);
-//		txn1.commit();
 	}
 
+	@RedisCommand(cmd = "LPUSH", returns = "OK")
+	public void lpush(MessageEvent e, Object[] args) {
+		String listname = new String((byte[]) args[1]);
+		String v = new String((byte[]) args[2]);
+		IList<String> list = base.client.getList(listname);
+		list.add(0, v);
+	}
+	
+	@RedisCommand(cmd = "LPOP")
+	public void rpop(MessageEvent e, Object[] args) {
+		String listname = new String((byte[]) args[1]);
+		IList<String> list = base.client.getList(listname);
+		Transaction txn1 = base.client.getTransaction();
+		
+		String v = null;
+		txn1.begin();
+		try {			
+			v = list.get(0);
+			list.remove(0);			
+		} catch (IndexOutOfBoundsException exc){
+			// pass
+		} finally {
+			txn1.commit();
+		}
+		
+		if (v == null) {
+			ServerReply sr = new ServerReply();
+			e.getChannel().write(sr.replyNone());
+		} else {
+			CommandArgs c = new CommandArgs();
+			c.add((String) v);
+			e.getChannel().write(c.buffer());
+		}
+	}
+
+	
+	
 	@RedisCommand(cmd = "LGETALL")
 	public void lrange(MessageEvent e, Object[] args) {
 		String listname = new String((byte[]) args[1]);
