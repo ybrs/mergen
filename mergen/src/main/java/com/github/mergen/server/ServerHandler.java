@@ -57,7 +57,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
 
             // which controller we need
             String cmd = new String((byte[])args[0]);
-            Class klass = dispatcher.getClassForCommand(cmd);
+            Class klass = dispatcher.getClassForCommand(cmd.toUpperCase());
 
             if (klass==null){
                 ServerReply sr = new ServerReply();
