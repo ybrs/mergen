@@ -110,4 +110,19 @@ public class ServerCommands extends Controller {
 		this.base.authenticated = true;
 	}
 
+	@RedisCommand(cmd = "INFO")
+	public void info(MessageEvent e, Object[] args) {
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+		mr.addString("redis_version:0.0.1");
+		mr.addString("mergen_version:0.0.1");		
+		mr.finish();
+		e.getChannel().write(mr.getBuffer());
+	}
+	
+	@RedisCommand(cmd = "SHUTDOWN", returns="OK")
+	public void shutdown(MessageEvent e, Object[] args) {
+		System.exit(0);
+	}
+	
 }
