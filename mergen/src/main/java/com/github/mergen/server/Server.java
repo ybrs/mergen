@@ -23,11 +23,14 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 // import com.github.nedis.pubsub.RedisListener;
+import com.github.mergen.persistence.DummyStore;
 import com.github.nedis.codec.*;
 import com.github.nedis.pubsub.RedisListener;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.Join;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
@@ -73,6 +76,20 @@ public class Server {
 
 	}
 
+	public void configurePersistence(Config cfg){
+		/** persistence related config **/
+		MapConfig mapConfig = new MapConfig("*");
+		MapStoreConfig mapstoreconfig = mapConfig.getMapStoreConfig();
+		if ( mapstoreconfig == null ){
+			mapstoreconfig = new MapStoreConfig();
+		}		
+		mapstoreconfig.setFactoryClassName(this.jct.persistence_class).setEnabled(true);
+		mapstoreconfig.setWriteDelaySeconds(this.jct.persistence_write_delay);
+		mapstoreconfig.setProperty("servers", this.jct.persistence_servers);
+		mapConfig.setMapStoreConfig(mapstoreconfig);
+		cfg.addMapConfig(mapConfig);		
+	}
+	
 	public void prepare() {
 		System.out.println("prepare");
 		channels = new DefaultChannelGroup();
@@ -97,6 +114,10 @@ public class Server {
 			System.out.println("reading config from " + this.jct.configpath + " DONE ");
 		} else {
 			cfg = new Config();
+		}
+		
+		if (this.jct.persistence.equals("true")  || this.jct.persistence.equals("on")){
+			configurePersistence(cfg);
 		}
 		
 		NetworkConfig network = cfg.getNetworkConfig();

@@ -29,4 +29,16 @@ public class ServerCommandLineArguments {
 	  public String publicipaddress = "";
 	  
 
+	  @Parameter(names = "-persistence", description = "persistence")
+	  public String persistence = "false";
+
+	  @Parameter(names = "-persistence-class", description = "persistence Class")
+	  public String persistence_class = "com.github.mergen.persistence.DummyStoreFactory";
+	  
+	  @Parameter(names = "-persistence-write-delay", description = "persistence write delay")
+	  public int persistence_write_delay = 0;
+	  
+	  @Parameter(names = "-persistence-servers", description = "persistence servers")
+	  public String persistence_servers = "localhost:6379";
+	  
 }
