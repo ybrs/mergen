@@ -42,5 +42,6 @@ public class DummyStore implements MapLoader, MapStore {
     public void deleteAll(Collection keys) {
         System.out.println("Store.deleteAll " + keys);
     }
+    
 }
 
