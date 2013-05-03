@@ -32,7 +32,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
 
     public ServerHandler(ChannelGroup channelGroup) {
         this.channelGroup = channelGroup;        
-        System.out.println(">>> handler");
     }
 
     public void setClient(HazelcastInstance client){
@@ -64,9 +63,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
                 e.getChannel().write(sr.replyError("method not implemented"));
                 
                 for (int i = 0; i < args.length; i++) {
-					System.out.println("received >>> ");
 					String mcmd = new String((byte[])args[i]);
-					System.out.println(mcmd);
 				}
                 return;
             }
@@ -77,7 +74,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             controller.context = ctx;
 
             if (size > 0){
-                // System.out.println(args[0]);
                 dispatcher.dispatch(controller, e, args);
             } else {
                 // TODO: ??? 
@@ -92,10 +88,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     }
 
 	public void setPubSubList(Map<String, Controller> subscriptions, long cnt) {
-		
-		System.out.println("====== cnt =====");
-		System.out.println(cnt);
-				
 		this.pubsublist = subscriptions;
 		this.base.setPubSubList(subscriptions);
 		this.base.setIdentifier(cnt);
@@ -103,7 +95,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
 	
 	@Override
 	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		System.out.println("Disconnected >>> " + this.base.getIdentifier());
+		// System.out.println("Disconnected >>> " + this.base.getIdentifier());
 		this.pubsublist.remove(this.base.getIdentifier());
 	}
 

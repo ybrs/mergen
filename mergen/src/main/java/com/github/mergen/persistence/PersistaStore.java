@@ -62,14 +62,14 @@ public class PersistaStore implements MapLoader, MapStore {
 	
 	
     public Set loadAllKeys() {
-        System.out.println("Loader.loadAllKeys ");
+//        System.out.println("Loader.loadAllKeys ");
         Set keys = new HashSet();
         keys.add("key");
         return keys;
     }
 
     public Object load(Object key) {
-        System.out.println("Loader.load " + key);
+//        System.out.println("Loader.load " + key);
         Jedis j = this.getConnection();
         try {
         	return j.get((String) key).toString();
@@ -79,12 +79,12 @@ public class PersistaStore implements MapLoader, MapStore {
     }
 
     public Map loadAll(Collection keys) {
-        System.out.println("Loader.loadAll keys " + keys);
+//        System.out.println("Loader.loadAll keys " + keys);
         return null;
     }
 
     public void store(Object key, Object value) {
-        System.out.println("Store.store key=" + key + ", value=" + value);
+//        System.out.println("Store.store key=" + key + ", value=" + value);
         Jedis j = this.getConnection();
         try {
         	j.set((String) key, (String) value);

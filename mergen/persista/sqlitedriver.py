@@ -10,8 +10,6 @@ except Exception as e:
     print e
 
 def set(key, val):
-    print "inserting", key, val
-    # if exists 
     cursor = c.execute("select key from kv where key=?", (key,))
     row = cursor.fetchone()
     if not row:    
@@ -19,8 +17,7 @@ def set(key, val):
     else:
         c.execute('update kv set key=?, value=?', (key, val))
 
-def get(key):    
-    print "try to return key", key
+def get(key):        
     cursor = c.execute("select value from kv where key=?", (key,))
     row = cursor.fetchone()
     print "returning", row[0]

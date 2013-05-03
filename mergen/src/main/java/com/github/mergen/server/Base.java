@@ -38,9 +38,6 @@ class Base implements MessageListener<TopicMessage> {
 		 * lock owners since we are a proxy, imho, practically this doesnt
 		 * change anything, revisit after pub/sub/topic...
 		 **/
-		
-		System.out.println("new base...");
-		
 		this.client = client;
 	}
 

@@ -94,7 +94,6 @@ public class ServerCommands extends Controller {
 		IMap<String, String> kvstore = base.client.getMap(kvstorename);
 		Set<String> keys = kvstore.keySet();
 		String[] array = keys.toArray(new String[0]);
-		System.out.println(Arrays.toString(array));
 		ServerReply sr = new ServerReply();
 		e.getChannel().write(sr.replyMulti(array));
 	}

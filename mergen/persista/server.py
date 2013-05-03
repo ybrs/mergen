@@ -4,7 +4,8 @@ from thegiant.helpers import OK, reply
 # this is a quick and dirty Key value server that holds everything in ram
 # mainly for test purposes
 
-from sqlitedriver import set, get, commit
+#from sqlitedriver import set, get, commit
+from blackhole import set, get, commit
 
 class Dispatcher(object):
     
@@ -24,10 +25,10 @@ class Dispatcher(object):
 
 h = {}
 def persista(e):
-    print "==============="
+    print "==================="
     print e['REDIS_CMD']
-    print "==============="
-    
+    print "==================="
+        
     dispatcher = Dispatcher()
     cmd = e['REDIS_CMD'][0]
     args = []
@@ -45,6 +46,5 @@ def persista(e):
     raise Exception("unknown command")
 
 
-
-thegiant.server.add_timer(0.2, commit)
+thegiant.server.add_timer(2, commit)
 thegiant.server.run(persista, '0.0.0.0', 6390)
