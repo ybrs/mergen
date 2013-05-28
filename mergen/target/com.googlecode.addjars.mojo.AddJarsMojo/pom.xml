@@ -70,7 +70,7 @@
         <enabled>false</enabled>
       </snapshots>
       <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/payload/groups/public/</url>
+      <url>http://repo.maven.apache.org/maven2/</url>
     </repository>
   </repositories>
   <build>
