@@ -1,0 +1,5 @@
+#!/bin/bash
+DIR="`dirname \"$0\"`"
+JAVA="`which java`"
+$JAVA -server -Djava.net.preferIPv4Stack=true -cp $DIR/server-1.0.0-jar-with-dependencies.jar \
+com.github.mergen.server.Server #2>>logs/mergen.log 1>>logs/mergen.log
