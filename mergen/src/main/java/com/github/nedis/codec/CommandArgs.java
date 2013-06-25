@@ -26,6 +26,13 @@ public class CommandArgs {
         return this;
     }
 
+    public CommandArgs add(int v) {
+        buffer.writeByte(':');
+        writeInt(v);
+        buffer.writeBytes(CRLF);
+        return this;
+    }
+
     public CommandArgs addKeys(String...keys) {
         for(String key : keys) {
             write(key.getBytes());

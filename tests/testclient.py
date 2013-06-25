@@ -64,6 +64,18 @@ class TestSequenceFunctions(unittest.TestCase):
         assert ret[1] == "bar2"
         assert ret[2] == None
 
+        r.hdel("xmap", "asd")
+        r.hdel("xmap", "a")
+        v = r.hincrby("xmap", "asd", 3)
+        assert v == 3
+        v = r.hincrby("xmap", "asd", 2)
+        assert v == 5
+        v = r.execute_command("hincr", "xmap", "a")
+        assert v == 1
+        v = r.execute_command("hincr", "xmap", "a")
+        assert v == 2
+
+
 
     def test_method_not_exists(self):
         r = redis.StrictRedis(host='localhost', password="bar", port=6380, db=0)

@@ -66,31 +66,37 @@ public class MapCommands extends Controller {
 	}
 
 	@RedisCommand(cmd = "HINCR")
-	public void get(MessageEvent e, Object[] args) {
+	public void hincr(MessageEvent e, Object[] args) {
 		String map = new String((byte[]) args[1]);
 		String k = new String((byte[]) args[2]);
 
 		IMap<String, String> kvstore = base.client.getMap(map);
 		Object v = kvstore.get(k);
-		if (v == null) {
-			kvstore.set(k, 1, 0, TimeUnit.SECONDS);
-		} else {
-			kvstore.set(k, Integer.parseInt((String) v), 0, TimeUnit.SECONDS);
+		int res = 1;
+		if (v != null) {
+			res = Integer.parseInt((String) v) + 1;
 		}
+		kvstore.set(k, Integer.toString(res), 0, TimeUnit.SECONDS);
+		CommandArgs c = new CommandArgs();
+		c.add(res);
+		e.getChannel().write(c.buffer());
 	}
 
 	@RedisCommand(cmd = "HINCRBY")
-	public void get(MessageEvent e, Object[] args) {
+	public void hincrby(MessageEvent e, Object[] args) {
 		String map = new String((byte[]) args[1]);
 		String k = new String((byte[]) args[2]);
+
 		int by = Integer.parseInt(new String((byte[]) args[3]));
 		IMap<String, String> kvstore = base.client.getMap(map);
 		Object v = kvstore.get(k);
-		if (v == null) {
-			kvstore.set(k, by, 0, TimeUnit.SECONDS);
-		} else {
-			kvstore.set(k, Integer.parseInt((String) v) + by, 0, TimeUnit.SECONDS);
+		if (v != null) {
+			by = Integer.parseInt((String) v) + by;
 		}
+		kvstore.set(k, Integer.toString(by), 0, TimeUnit.SECONDS);
+		CommandArgs c = new CommandArgs();
+		c.add(by);
+		e.getChannel().write(c.buffer());
 	}
 
 	@RedisCommand(cmd = "HMGET")
