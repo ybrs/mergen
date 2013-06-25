@@ -75,7 +75,7 @@ public class MapCommands extends Controller {
 		if (v == null) {
 			kvstore.set(k, 1, 0, TimeUnit.SECONDS);
 		} else {
-			kvstore.set(k, Integer.parseInt(v), 0, TimeUnit.SECONDS);
+			kvstore.set(k, Integer.parseInt((String) v), 0, TimeUnit.SECONDS);
 		}
 	}
 
@@ -89,7 +89,7 @@ public class MapCommands extends Controller {
 		if (v == null) {
 			kvstore.set(k, by, 0, TimeUnit.SECONDS);
 		} else {
-			kvstore.set(k, Integer.parseInt(v) + by, 0, TimeUnit.SECONDS);
+			kvstore.set(k, Integer.parseInt((String) v) + by, 0, TimeUnit.SECONDS);
 		}
 	}
 
