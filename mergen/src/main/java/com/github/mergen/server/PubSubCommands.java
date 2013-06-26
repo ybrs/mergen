@@ -95,8 +95,7 @@ public class PubSubCommands extends Controller {
 		String channelname = new String((byte[]) args[1]);
         ITopic topic = this.base.client.getTopic(channelname);
         TopicMessage msg = new TopicMessage(v, this.base.getIdentifier(), "message", channelname);
-        topic.publish(msg);        
-
+        topic.publish(msg);
 	}
 
 	

@@ -1,0 +1,167 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.mergen</groupId>
+  <artifactId>server</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>mergen</name>
+  <url>http://github.com/ybrs/mergen/</url>
+  <description>
+    In memory data grid for the rest of us.
+  </description>
+  <inceptionYear>2012</inceptionYear>
+  <developers>
+    <developer>
+      <name>ybrs</name>
+      <email>aybars.badur@gmail.com</email>
+      <url>http://github.com/ybrs</url>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>repository.jboss.org</id>
+      <url>http://repo.maven.apache.org/maven2/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>3.5.8.Final</version>
+      <scope>compile</scope>
+    </dependency>
+   <dependency>
+     <groupId>junit</groupId>
+     <artifactId>junit</artifactId>
+     <version>4.8.2</version>
+     <scope>test</scope>
+   </dependency>
+   
+   
+<dependency>
+    <groupId>redis.clients</groupId>
+    <artifactId>jedis</artifactId>
+    <version>2.0.0</version>
+    <type>jar</type>
+</dependency>   
+   
+   <!-- 
+    <dependency>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast</artifactId>
+      <version>2.4</version>
+    </dependency>
+-->
+    <dependency>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast</artifactId>
+      <version>2.4.2-SNAPSHOT</version>
+    </dependency>
+  
+    
+    
+    <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>1.8.5</version>
+    </dependency>  
+
+    <!-- for parameter parsing -->
+    <dependency>
+      <groupId>com.beust</groupId>
+      <artifactId>jcommander</artifactId>
+      <version>1.30</version>
+    </dependency>
+
+<dependency>
+    <groupId>org.mongodb</groupId>
+    <artifactId>mongo-java-driver</artifactId>
+    <version>2.11.1</version>
+</dependency>
+            
+
+<!--
+    <dependency>
+      <groupId>org.python</groupId>
+      <artifactId>jython-standalone</artifactId>
+      <version>2.5.3</version>
+    </dependency>
+
+  <dependency>
+    <groupId>rhino</groupId>
+    <artifactId>js</artifactId>
+    <version>1.7R2</version>
+  </dependency>
+-->            
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Compiler configuration -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+
+      <!-- tests -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.4.3</version>
+        <configuration>
+          <forkMode>never</forkMode>
+          <excludes>
+            <exclude>**/Abstract*</exclude>
+            <exclude>**/*TestUtil*</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <!-- lib/jars -->
+      <plugin>
+          <groupId>com.googlecode.addjars-maven-plugin</groupId>
+          <artifactId>addjars-maven-plugin</artifactId>
+          <version>1.0.4</version>
+          <executions>
+              <execution>
+                  <goals>
+                      <goal>add-jars</goal>
+                  </goals>
+                  <configuration>
+                      <resources>
+                          <resource>
+                              <directory>${basedir}/lib</directory>
+                          </resource>
+                      </resources>
+                  </configuration>
+              </execution>
+          </executions>
+      </plugin>      
+
+    </plugins>
+  </build>
+</project>

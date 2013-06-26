@@ -3,6 +3,7 @@ package com.github.mergen.server;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ITopic;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
 
@@ -63,17 +64,52 @@ class Base implements MessageListener<TopicMessage> {
 
 	@Override
 	public void onMessage(Message<TopicMessage> msg) {
-		System.out.println("message received " + msg);
-		TopicMessage tm = msg.getMessageObject();
-		Controller c = this.pubsublist.get(this.getIdentifier());
-		System.out.println("pushing to >>>>" + this.getIdentifier());
-		ServerReply sr = new ServerReply();
-		ServerReply.MultiReply mr = sr.startMultiReply();
-		mr.addString("message");
-		mr.addString(tm.getChannel());
-		mr.addString(tm.getStr());
-		mr.finish();
-		c.context.getChannel().write(mr.getBuffer());		
+		System.out.println("message received - " + msg);
+		try {
+			TopicMessage tm = msg.getMessageObject();
+			Controller c = this.pubsublist.get(this.getIdentifier());
+			
+			if (c==null){
+				System.out.println(this.getIdentifier() + " is not connected anymore stop sending topics here");
+				
+		        ITopic topic = this.client.getTopic(tm.getChannel());
+		        topic.removeMessageListener(this);
+		
+				return;
+			}
+			
+			if (tm.getChannel() == null){
+				System.out.println(this.getIdentifier() + " is not connected anymore removing and cleaning up");
+				this.pubsublist.remove(this.getIdentifier());
+				return;
+			}
+			
+			if (c.context.getChannel() == null){
+				System.out.println(this.getIdentifier() + " is not connected anymore removing and cleaning up");
+				this.pubsublist.remove(this.getIdentifier());
+				return;
+			}
+			
+			
+			System.out.println("pushing to >>>>" + this.getIdentifier());
+
+			ServerReply sr = new ServerReply();
+			ServerReply.MultiReply mr = sr.startMultiReply();
+			mr.addString("message");
+			mr.addString(tm.getChannel());
+			mr.addString(tm.getStr());
+			mr.finish();
+			if (c.context.getChannel().isWritable()){
+				c.context.getChannel().write(mr.getBuffer());	
+			} else {
+				System.out.println(this.getIdentifier() + " is not connected anymore removing and cleaning up");
+				this.pubsublist.remove(this.getIdentifier());
+			}
+		} catch (Exception e){
+			System.out.println("we have connection leak. - 1");
+			System.out.println(e);
+			e.printStackTrace();
+		}
 	}
 
 	
