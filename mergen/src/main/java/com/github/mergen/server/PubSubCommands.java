@@ -21,6 +21,7 @@ import java.util.concurrent.*;
 
 import com.github.nedis.codec.CommandArgs;
 
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 
 public class PubSubCommands extends Controller {
@@ -41,12 +42,27 @@ public class PubSubCommands extends Controller {
 			this.base.subscriptioncnt = this.base.subscriptioncnt + 1;
 	        ITopic topic = this.base.client.getTopic(channelname);
 	        topic.addMessageListener(this.base);
+
+	        this.base.subscribedchannels.add(channelname);
+	        
+			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
+			String localhostname;
+			try {
+				localhostname = java.net.InetAddress.getLocalHost().getHostName();
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+				localhostname = "unknown";
+			}
+			kvstore.set(localhostname + "-" + this.base.getIdentifier(), "1", 0, TimeUnit.SECONDS);
+
 	        mr.addString("subscribe");
 	        mr.addString(channelname);
 		}				
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
+		
 		// System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));		
 	}
 
@@ -72,6 +88,18 @@ public class PubSubCommands extends Controller {
 	        
 	        mr.addString("unsubscribe");
 	        mr.addString(channelname);
+	        
+	        // remove from hash
+			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
+			String localhostname;
+			try {
+				localhostname = java.net.InetAddress.getLocalHost().getHostName();
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+				localhostname = "unknown";
+			}
+			kvstore.remove(localhostname + "-" + this.base.getIdentifier());
 		}				
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
@@ -81,12 +109,28 @@ public class PubSubCommands extends Controller {
 	}
 	
 	
-	@RedisCommand(cmd = "SUBSCRIBERS", returns = "OK")
+	@RedisCommand(cmd = "SUBSCRIBERS")
 	public void showsubscribers(MessageEvent e, Object[] args) {
-		System.out.println("subscribers are: ...");
-		for (String k : this.base.getPubSubList().keySet()) {
-			System.out.println(">>>>" + k);
+		Object object  = args[1];
+		String channelname = new String((byte[]) object);
+		
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+
+		IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
+		
+		Set<String> keys = kvstore.keySet();
+
+		for (String k: keys.toArray(new String[0])){
+			mr.addString(k);
 		}
+		
+//		for (String k : this.base.getPubSubList().keySet()) {
+//			System.out.println(">>>>" + k);
+//			mr.addString(k);
+//		}
+		mr.finish();
+		e.getChannel().write(mr.getBuffer());
 	}
 	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")

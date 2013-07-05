@@ -135,7 +135,9 @@ public class Server {
 				.setMulticastGroup(this.jct.multicastgroup)
 				.setMulticastPort(this.jct.multicastport)
 				.setEnabled(true);
-		}		
+		} else {
+			join.getMulticastConfig().setEnabled(false);
+		}
 		
 		for (String ns: this.jct.hzcluster) {
 			join.getTcpIpConfig().addMember(ns);

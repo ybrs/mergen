@@ -44,10 +44,17 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
+    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    	System.out.println("disconnected brother - " + this.base.getIdentifier());
+    	this.base.removeAllListeners();
+    }
+
+    @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         this.channelGroup.add(e.getChannel());
     }
 
+    
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (e.getMessage() instanceof MultiBulkReply){

@@ -17,6 +17,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channels;
 import java.util.*;
 import java.lang.annotation.*;
+import java.net.UnknownHostException;
 import java.util.concurrent.*;
 
 import com.github.nedis.codec.CommandArgs;
@@ -31,6 +32,8 @@ class Base implements MessageListener<TopicMessage> {
 	public HazelcastInstance client;
 	private Map<String, Controller> pubsublist;
 	private String identifier;
+	public List<String> subscribedchannels;
+	
 	public int subscriptioncnt = 0;
 
 	public Base(HazelcastInstance client) {
@@ -40,6 +43,7 @@ class Base implements MessageListener<TopicMessage> {
 		 * change anything, revisit after pub/sub/topic...
 		 **/
 		this.client = client;
+		this.subscribedchannels = new ArrayList<String>();
 	}
 
 	public boolean isAuthenticated() {
@@ -62,6 +66,28 @@ class Base implements MessageListener<TopicMessage> {
 		return this.identifier;
 	}
 
+	
+	public void removeAllListeners(){
+		for (Object k: this.subscribedchannels.toArray()){
+			System.out.println("Disconnected - removing listener " + k.toString());
+	        ITopic topic = this.client.getTopic(k.toString());
+	        topic.removeMessageListener(this);
+	        //
+	        
+			IMap<String, String> kvstore = this.client.getMap("HZ-SUBSCRIBERS-"+k);
+			String localhostname;
+			try {
+				localhostname = java.net.InetAddress.getLocalHost().getHostName();
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+				localhostname = "unknown";
+			}
+			kvstore.remove(localhostname + "-" + this.getIdentifier());
+		}
+		
+	}
+	
 	@Override
 	public void onMessage(Message<TopicMessage> msg) {
 		System.out.println("message received - " + msg);
