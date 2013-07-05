@@ -26,6 +26,12 @@ import java.nio.charset.Charset;
 
 public class PubSubCommands extends Controller {
 	
+	@RedisCommand(cmd = "IDENTIFY", returns="OK")
+	public void identify(MessageEvent e, Object[] args) {
+		String v = new String((byte[]) args[1]);
+		this.base.clientIdentifier = v;
+	}
+	
 	@RedisCommand(cmd = "SUBSCRIBE")
 	public void subscribe(MessageEvent e, Object[] args) {
 		Controller controller = this.base.getPubSubList().get(this.base.getIdentifier());		
@@ -54,7 +60,7 @@ public class PubSubCommands extends Controller {
 				e1.printStackTrace();
 				localhostname = "unknown";
 			}
-			kvstore.set(localhostname + "-" + this.base.getIdentifier(), "1", 0, TimeUnit.SECONDS);
+			kvstore.set(localhostname + "-" + this.base.getIdentifier(), this.base.clientIdentifier, 0, TimeUnit.SECONDS);
 
 	        mr.addString("subscribe");
 	        mr.addString(channelname);
@@ -123,12 +129,9 @@ public class PubSubCommands extends Controller {
 
 		for (String k: keys.toArray(new String[0])){
 			mr.addString(k);
+			mr.addString(kvstore.get(k));
 		}
 		
-//		for (String k : this.base.getPubSubList().keySet()) {
-//			System.out.println(">>>>" + k);
-//			mr.addString(k);
-//		}
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
 	}

@@ -33,7 +33,7 @@ class Base implements MessageListener<TopicMessage> {
 	private Map<String, Controller> pubsublist;
 	private String identifier;
 	public List<String> subscribedchannels;
-	
+	public String clientIdentifier;
 	public int subscriptioncnt = 0;
 
 	public Base(HazelcastInstance client) {
@@ -44,6 +44,7 @@ class Base implements MessageListener<TopicMessage> {
 		 **/
 		this.client = client;
 		this.subscribedchannels = new ArrayList<String>();
+		this.clientIdentifier = "unknown";
 	}
 
 	public boolean isAuthenticated() {
