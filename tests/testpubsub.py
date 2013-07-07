@@ -83,7 +83,5 @@ class PubSubTestCase(unittest.TestCase):
             print err
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
