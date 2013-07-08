@@ -52,18 +52,15 @@ public class PubSubCommands extends Controller {
 	        this.base.subscribedchannels.add(channelname);
 	        
 			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
-			String localhostname;
-			try {
-				localhostname = java.net.InetAddress.getLocalHost().getHostName();
-			} catch (UnknownHostException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				localhostname = "unknown";
-			}
-			kvstore.set(localhostname + "-" + this.base.getIdentifier(), this.base.clientIdentifier, 0, TimeUnit.SECONDS);
+
+			kvstore.set(this.base.getClientName(), this.base.clientIdentifier, 0, TimeUnit.SECONDS);
 
 	        mr.addString("subscribe");
 	        mr.addString(channelname);
+	        // publish this to events channel
+	        this.base.publish("HZ-EVENTS", "{'eventtype':'subscribed', 'channel':'"+channelname+"', " +
+	        				  "'clientname':'"+this.base.getClientName()+"'," +
+	        			      "'identifier':'"+this.base.clientIdentifier + "'}");
 		}				
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
@@ -106,6 +103,12 @@ public class PubSubCommands extends Controller {
 				localhostname = "unknown";
 			}
 			kvstore.remove(localhostname + "-" + this.base.getIdentifier());
+			
+	        this.base.publish("HZ-EVENTS", "{'eventtype':'unsubscribed', " +
+	        		"'channel':'"+channelname+"', " +
+	        		",'clientname':'"+this.base.getClientName()+"'," +
+      			  "'identifier':'"+this.base.clientIdentifier + "'}");
+			
 		}				
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
@@ -135,14 +138,12 @@ public class PubSubCommands extends Controller {
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
 	}
-	
+		
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
 	public void publish(MessageEvent e, Object[] args) {
 		String v = new String((byte[]) args[2]);
 		String channelname = new String((byte[]) args[1]);
-        ITopic topic = this.base.client.getTopic(channelname);
-        TopicMessage msg = new TopicMessage(v, this.base.getIdentifier(), "message", channelname);
-        topic.publish(msg);
+		this.base.publish(channelname, v);
 	}
 
 	

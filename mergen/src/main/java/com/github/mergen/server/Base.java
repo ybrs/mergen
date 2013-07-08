@@ -66,9 +66,34 @@ class Base implements MessageListener<TopicMessage> {
 	public String getIdentifier() {
 		return this.identifier;
 	}
+	
+	public void publish(String channelname, String message){
+        ITopic topic = this.client.getTopic(channelname);
+        TopicMessage msg = new TopicMessage(message, this.getIdentifier(), "message", channelname);
+        topic.publish(msg);
+	}
+	
+	/*
+	 * get internal name for client
+	 */
+	public String getClientName(){
+		String localhostname;
+		try {
+			localhostname = java.net.InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			localhostname = "unknown";
+		}
+		String clientname = localhostname + "-" + this.getIdentifier();
+		return clientname;
+	}
 
 	
 	public void removeAllListeners(){
+		/*
+		 * this only works on disconnect
+		 */
 		for (Object k: this.subscribedchannels.toArray()){
 			System.out.println("Disconnected - removing listener " + k.toString());
 	        ITopic topic = this.client.getTopic(k.toString());
@@ -76,15 +101,12 @@ class Base implements MessageListener<TopicMessage> {
 	        //
 	        
 			IMap<String, String> kvstore = this.client.getMap("HZ-SUBSCRIBERS-"+k);
-			String localhostname;
-			try {
-				localhostname = java.net.InetAddress.getLocalHost().getHostName();
-			} catch (UnknownHostException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				localhostname = "unknown";
-			}
-			kvstore.remove(localhostname + "-" + this.getIdentifier());
+			kvstore.remove(this.getClientName());
+			
+	        this.publish("HZ-EVENTS", "{'eventtype':'disconnect', " +
+	        		"'channel':'"+k+"', " +
+	        		"'clientname':'"+this.getClientName()+"'," +
+	      			  "'identifier':'"+this.clientIdentifier + "'}");
 		}
 		
 	}
@@ -95,13 +117,11 @@ class Base implements MessageListener<TopicMessage> {
 		try {
 			TopicMessage tm = msg.getMessageObject();
 			Controller c = this.pubsublist.get(this.getIdentifier());
-			
+			/** these are just fallbacks, if anything gets wrong, never works though **/
 			if (c==null){
 				System.out.println(this.getIdentifier() + " is not connected anymore stop sending topics here");
-				
 		        ITopic topic = this.client.getTopic(tm.getChannel());
 		        topic.removeMessageListener(this);
-		
 				return;
 			}
 			
