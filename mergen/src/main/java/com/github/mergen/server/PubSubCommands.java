@@ -1,11 +1,13 @@
 package com.github.mergen.server;
 
 import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ITopic;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
+import com.hazelcast.core.Transaction;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -31,6 +33,26 @@ public class PubSubCommands extends Controller {
 		String v = new String((byte[]) args[1]);
 		this.base.clientIdentifier = v;
 	}
+	
+	private String popWaitingMessage(String channelname){
+
+		IList<String> list = this.base.client.getList("HZ-PSQUEUE-"+channelname);
+		Transaction txn1 = base.client.getTransaction();
+
+		String v = null;
+		txn1.begin();
+		try {			
+			v = list.get(0);
+			list.remove(0);			
+		} catch (IndexOutOfBoundsException exc){
+			// pass
+		} finally {
+			txn1.commit();
+		}
+
+		return v;
+	}
+	
 	
 	@RedisCommand(cmd = "SUBSCRIBE")
 	public void subscribe(MessageEvent e, Object[] args) {
@@ -61,6 +83,20 @@ public class PubSubCommands extends Controller {
 	        this.base.publish("HZ-EVENTS", "{'eventtype':'subscribed', 'channel':'"+channelname+"', " +
 	        				  "'clientname':'"+this.base.getClientName()+"'," +
 	        			      "'identifier':'"+this.base.clientIdentifier + "'}");
+	        
+	        /**
+	         * if we have waiting messages for this queue/channel
+	         * deliver them
+	         */
+	        String v;
+	        while (true){
+	        	v = this.popWaitingMessage(channelname);
+	        	if (v==null){
+	        		break;
+	        	}
+	        	this.base.publish(channelname, v);
+	        }
+	        
 		}				
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
@@ -94,15 +130,7 @@ public class PubSubCommands extends Controller {
 	        
 	        // remove from hash
 			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
-			String localhostname;
-			try {
-				localhostname = java.net.InetAddress.getLocalHost().getHostName();
-			} catch (UnknownHostException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				localhostname = "unknown";
-			}
-			kvstore.remove(localhostname + "-" + this.base.getIdentifier());
+			kvstore.remove(this.base.getClientName() + "-" + this.base.getIdentifier());
 			
 	        this.base.publish("HZ-EVENTS", "{'eventtype':'unsubscribed', " +
 	        		"'channel':'"+channelname+"', " +
@@ -144,6 +172,22 @@ public class PubSubCommands extends Controller {
 		String v = new String((byte[]) args[2]);
 		String channelname = new String((byte[]) args[1]);
 		this.base.publish(channelname, v);
+		
+		/**
+		 * is it persistent or a normal pubsub message
+		 * if channelname ends with -queue then we store the message until
+		 * it gets delivered.
+		 */
+		if (channelname.endsWith("-queue")){
+			// do we have any subscribers to this channel now.
+			IMap<String, String> kvstore = this.base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
+			if (kvstore.size() == 0){
+				// store the message until it gets delivered.
+				IList<String> list = this.base.client.getList("HZ-PSQUEUE-"+channelname);
+				list.add(v);
+			}
+		}
+
 	}
 
 	

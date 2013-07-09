@@ -1,6 +1,7 @@
 package com.github.mergen.server;
 
 import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ITopic;
@@ -67,7 +68,7 @@ class Base implements MessageListener<TopicMessage> {
 		return this.identifier;
 	}
 	
-	public void publish(String channelname, String message){
+	public void publish(String channelname, String message){		
         ITopic topic = this.client.getTopic(channelname);
         TopicMessage msg = new TopicMessage(message, this.getIdentifier(), "message", channelname);
         topic.publish(msg);
