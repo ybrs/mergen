@@ -1,5 +1,7 @@
 package com.github.mergen.server;
 
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
@@ -18,6 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channels;
 import java.util.*;
+import java.io.Serializable;
 import java.lang.annotation.*;
 import java.util.concurrent.*;
 
@@ -25,6 +28,7 @@ import com.github.nedis.codec.CommandArgs;
 
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+
 
 public class PubSubCommands extends Controller {
 	
@@ -88,16 +92,18 @@ public class PubSubCommands extends Controller {
 	         * if we have waiting messages for this queue/channel
 	         * deliver them
 	         */
-	        String v;
-	        while (true){
-	        	v = this.popWaitingMessage(channelname);
-	        	if (v==null){
-	        		break;
-	        	}
-	        	this.base.publish(channelname, v);
-	        }
-	        
-		}				
+	        if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
+		        String v;
+		        while (true){
+		        	v = this.popWaitingMessage(channelname);
+		        	if (v==null){
+		        		break;
+		        	}
+		        	this.base.publish(channelname, v);
+		        }
+	        }	        
+		}
+		
 		mr.addInt(this.base.subscriptioncnt);
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
@@ -144,6 +150,67 @@ public class PubSubCommands extends Controller {
 		
 		// System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));		
 	}
+
+	private PubSubChannel getChannelProps(String channelname){
+		IMap<String, PubSubChannel> kvstore = base.client.getMap("HZ-CHANNELS");
+		PubSubChannel chan = kvstore.get(channelname);
+		if (chan == null){
+			chan = new PubSubChannel();
+			chan.channelname = channelname;
+		}
+		return chan;
+	}
+	
+	@RedisCommand(cmd="CHANNELPROPERTIES")
+	public void channelProperties(MessageEvent e, Object[] args) {
+		String channelname = new String((byte[]) args[1]);
+		
+		PubSubChannel chan = this.getChannelProps(channelname);
+		
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+		
+		mr.addString("mustdeliver");
+		if (chan.mustDeliver){
+			mr.addString("true");
+		} else {
+			mr.addString("false");
+		}
+		mr.addString("requireack");
+		if(chan.requireAcknowledgement){
+			mr.addString("true");
+		} else {
+			mr.addString("false");
+		}
+		
+		mr.addString("deliverymethod");
+		mr.addString(chan.deliveryMethod);
+		mr.finish();
+		e.getChannel().write(mr.getBuffer());
+	}
+	
+	
+	@RedisCommand(cmd="MODIFYCHANNEL", returns="OK")
+	public void modifychannel(MessageEvent e, Object[] args) {
+		String channelname = new String((byte[]) args[1]);
+		String k = new String((byte[]) args[2]);
+		String v = new String((byte[]) args[3]);
+
+		/**
+		 * TODO: check arguments...
+		 */	
+		PubSubChannel chan = this.getChannelProps(channelname);
+		if (k.equalsIgnoreCase("mustdeliver")){
+			chan.mustDeliver = v.equalsIgnoreCase("true");
+		} else if (k.equalsIgnoreCase("requireack")){
+			chan.requireAcknowledgement = v.equalsIgnoreCase("true");
+		} else if (k.equalsIgnoreCase("deliverymethod")){
+			// TODO: check params
+			chan.deliveryMethod = v;
+		}
+		IMap<String, PubSubChannel> kvstore = base.client.getMap("HZ-CHANNELS");
+		kvstore.set(channelname, chan, 0, TimeUnit.SECONDS);
+	}
 	
 	
 	@RedisCommand(cmd = "SUBSCRIBERS")
@@ -175,10 +242,10 @@ public class PubSubCommands extends Controller {
 		
 		/**
 		 * is it persistent or a normal pubsub message
-		 * if channelname ends with -queue then we store the message until
+		 * if channelname ends with -reliable then we store the message until
 		 * it gets delivered.
 		 */
-		if (channelname.endsWith("-queue")){
+		if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
 			// do we have any subscribers to this channel now.
 			IMap<String, String> kvstore = this.base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
 			if (kvstore.size() == 0){

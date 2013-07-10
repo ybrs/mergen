@@ -31,6 +31,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.Join;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
@@ -99,6 +100,9 @@ public class Server {
 				Executors.newCachedThreadPool());
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 		
+		MapConfig mapConfig = new MapConfig("HZ-CHANNELS");
+        NearCacheConfig nearCacheConfig = new NearCacheConfig();
+		mapConfig.setNearCacheConfig(nearCacheConfig);
 		
 		Config cfg;
 		

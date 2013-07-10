@@ -45,7 +45,7 @@ class Base implements MessageListener<TopicMessage> {
 		 **/
 		this.client = client;
 		this.subscribedchannels = new ArrayList<String>();
-		this.clientIdentifier = "unknown";
+		this.clientIdentifier = UUID.randomUUID().toString();
 	}
 
 	public boolean isAuthenticated() {
@@ -100,7 +100,6 @@ class Base implements MessageListener<TopicMessage> {
 	        ITopic topic = this.client.getTopic(k.toString());
 	        topic.removeMessageListener(this);
 	        //
-	        
 			IMap<String, String> kvstore = this.client.getMap("HZ-SUBSCRIBERS-"+k);
 			kvstore.remove(this.getClientName());
 			
@@ -138,9 +137,8 @@ class Base implements MessageListener<TopicMessage> {
 				return;
 			}
 			
-			
 			System.out.println("pushing to >>>>" + this.getIdentifier());
-
+			
 			ServerReply sr = new ServerReply();
 			ServerReply.MultiReply mr = sr.startMultiReply();
 			mr.addString("message");
@@ -159,6 +157,4 @@ class Base implements MessageListener<TopicMessage> {
 			e.printStackTrace();
 		}
 	}
-
-	
 }
