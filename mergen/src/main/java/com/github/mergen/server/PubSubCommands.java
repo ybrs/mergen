@@ -89,7 +89,7 @@ public class PubSubCommands extends Controller {
 	        			      "'identifier':'"+this.base.clientIdentifier + "'}");
 	        
 			PubSubChannel chan = this.getChannelProps(channelname);
-			chan.addClient(base.getClientName());
+			chan.addClient(base.getUniqueChannelName());
 			
 	        /**
 	         * if we have waiting messages for this queue/channel
@@ -280,10 +280,14 @@ public class PubSubCommands extends Controller {
 			this.base.publish(channelname, v);
 		} else if (chan.deliveryMethod.equals("roundrobin")) {
 			// if its round robin and we have X clients, relay the message to the next client
-			System.out.println("next client - "+ chan.nextClient());
+			String nextClient = chan.nextClient();
+			System.out.println("next client - "+ nextClient);
 			// we have to save this everytime, so distributed round robin 
 			// is a little bit hard work
+			// we first save channelname then publish
 			saveChanProps(channelname, chan);
+			//
+			this.base.publish(nextClient, v, channelname);
 		} else if (chan.deliveryMethod.equals("sticky")){
 			// if its sticky, always relay the same origin to the same client 
 		}

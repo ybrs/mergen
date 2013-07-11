@@ -67,6 +67,13 @@ class Base implements MessageListener<TopicMessage> {
 	public String getIdentifier() {
 		return this.identifier;
 	}
+
+	public void publish(String channelname, String message, String relay){
+        ITopic topic = this.client.getTopic(channelname);
+        TopicMessage msg = new TopicMessage(message, this.getIdentifier(), "message", relay);
+        topic.publish(msg);
+    }
+
 	
 	public void publish(String channelname, String message){		
         ITopic topic = this.client.getTopic(channelname);
