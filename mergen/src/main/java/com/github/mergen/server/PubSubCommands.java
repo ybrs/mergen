@@ -88,9 +88,15 @@ public class PubSubCommands extends Controller {
 	        				  "'clientname':'"+this.base.getClientName()+"'," +
 	        			      "'identifier':'"+this.base.clientIdentifier + "'}");
 	        
+			PubSubChannel chan = this.getChannelProps(channelname);
+			chan.addClient(base.getClientName());
+			
 	        /**
 	         * if we have waiting messages for this queue/channel
 	         * deliver them
+	         * 
+	         * TODO: if its roundrobin ??
+	         * 
 	         */
 	        if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
 		        String v;
@@ -108,7 +114,10 @@ public class PubSubCommands extends Controller {
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
 		
-		// System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));		
+		// when we have a subscriber, we attach a unique channel to it.
+		// so we can roundrobin, send events etc.
+        ITopic topic = this.base.client.getTopic(this.base.getUniqueChannelName());
+        topic.addMessageListener(this.base);
 	}
 
 	@RedisCommand(cmd = "UNSUBSCRIBE")
@@ -208,10 +217,15 @@ public class PubSubCommands extends Controller {
 			// TODO: check params
 			chan.deliveryMethod = v;
 		}
+		
+		saveChanProps(channelname, chan);
+	}
+	
+
+	private void saveChanProps(String channelname, PubSubChannel chan){
 		IMap<String, PubSubChannel> kvstore = base.client.getMap("HZ-CHANNELS");
 		kvstore.set(channelname, chan, 0, TimeUnit.SECONDS);
 	}
-	
 	
 	@RedisCommand(cmd = "SUBSCRIBERS")
 	public void showsubscribers(MessageEvent e, Object[] args) {
@@ -238,22 +252,42 @@ public class PubSubCommands extends Controller {
 	public void publish(MessageEvent e, Object[] args) {
 		String v = new String((byte[]) args[2]);
 		String channelname = new String((byte[]) args[1]);
-		this.base.publish(channelname, v);
-		
+
 		/**
-		 * is it persistent or a normal pubsub message
+		 * is it persistent or a normal pubsub message ?
 		 * if channelname ends with -reliable then we store the message until
 		 * it gets delivered.
+		 * 
+		 * if there is no one listening to channel, just save it and return
+		 * dont care about the delivery method anymore
+		 * 
 		 */
+		IMap<String, String> kvstore = this.base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
+
 		if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
 			// do we have any subscribers to this channel now.
-			IMap<String, String> kvstore = this.base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
 			if (kvstore.size() == 0){
 				// store the message until it gets delivered.
 				IList<String> list = this.base.client.getList("HZ-PSQUEUE-"+channelname);
 				list.add(v);
+				return;
 			}
+		} 
+		
+		
+		PubSubChannel chan = this.getChannelProps(channelname);
+		if (chan.deliveryMethod.equals("broadcast")){
+			this.base.publish(channelname, v);
+		} else if (chan.deliveryMethod.equals("roundrobin")) {
+			// if its round robin and we have X clients, relay the message to the next client
+			System.out.println("next client - "+ chan.nextClient());
+			// we have to save this everytime, so distributed round robin 
+			// is a little bit hard work
+			saveChanProps(channelname, chan);
+		} else if (chan.deliveryMethod.equals("sticky")){
+			// if its sticky, always relay the same origin to the same client 
 		}
+		
 
 	}
 

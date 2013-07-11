@@ -157,4 +157,9 @@ class Base implements MessageListener<TopicMessage> {
 			e.printStackTrace();
 		}
 	}
+
+	// hopefully returns a unique channel name for this client.
+	public String getUniqueChannelName() {
+		return "HZ-INTERNAL-"+this.getClientName();
+	}
 }
