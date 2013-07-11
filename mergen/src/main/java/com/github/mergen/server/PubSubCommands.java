@@ -181,7 +181,7 @@ public class PubSubCommands extends Controller {
 			mr.addString("false");
 		}
 		mr.addString("requireack");
-		if(chan.requireAcknowledgement){
+		if (chan.requireAcknowledgement){
 			mr.addString("true");
 		} else {
 			mr.addString("false");
@@ -270,7 +270,10 @@ public class PubSubCommands extends Controller {
 		} else if (chan.deliveryMethod.equals("roundrobin")) {
 			// if its round robin and we have X clients, relay the message to the next client
 			String nextClient = chan.nextClient();
-			System.out.println("next client - "+ nextClient);
+			if (nextClient == null){
+				return;
+			}
+
 			// we have to save this everytime, so distributed round robin 
 			// is a little bit hard work
 			// we first save channelname then publish
@@ -278,7 +281,7 @@ public class PubSubCommands extends Controller {
 			//
 			this.base.publish(nextClient, v, channelname);
 		} else if (chan.deliveryMethod.equals("sticky")){
-			// if its sticky, always relay the same origin to the same client 
+			// if its sticky, always relay the same origin to the same client
 		}
 		
 

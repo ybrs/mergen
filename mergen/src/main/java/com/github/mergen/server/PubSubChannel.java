@@ -21,7 +21,11 @@ public class PubSubChannel implements Serializable {
 	}
 	
 	public String nextClient(){
-		return clients.get(this.incrementClient() % clients.size());
+		int size = clients.size();
+		if (size == 0){
+			return null;
+		}
+		return clients.get(this.incrementClient() % size);
 	}
 	
 	public void addClient(String clientId){
