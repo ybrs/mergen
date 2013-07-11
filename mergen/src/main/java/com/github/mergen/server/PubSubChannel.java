@@ -2,6 +2,7 @@ package com.github.mergen.server;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class PubSubChannel implements Serializable {
@@ -16,7 +17,7 @@ public class PubSubChannel implements Serializable {
 	List <String> clients;
 	
 	public PubSubChannel(){
-		this.clients = new ArrayList<String>();
+		this.clients = Collections.synchronizedList(new ArrayList<String>());
 	}
 	
 	public String nextClient(){
@@ -24,8 +25,9 @@ public class PubSubChannel implements Serializable {
 	}
 	
 	public void addClient(String clientId){
-		System.out.println("adding client - " + clientId + " size:" + clients.size());
 		clients.add(clientId);
+		System.out.println(clients);
+		System.out.println("adding client - " + clientId + " size:" + clients.size());
 	}
 	
 	public int incrementClient(){

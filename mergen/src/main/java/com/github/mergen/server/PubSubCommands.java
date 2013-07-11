@@ -90,6 +90,7 @@ public class PubSubCommands extends Controller {
 	        
 			PubSubChannel chan = this.getChannelProps(channelname);
 			chan.addClient(base.getUniqueChannelName());
+			saveChanProps(channelname, chan);
 			
 	        /**
 	         * if we have waiting messages for this queue/channel
@@ -273,7 +274,6 @@ public class PubSubCommands extends Controller {
 				return;
 			}
 		} 
-		
 		
 		PubSubChannel chan = this.getChannelProps(channelname);
 		if (chan.deliveryMethod.equals("broadcast")){
