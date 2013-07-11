@@ -110,6 +110,10 @@ class Base implements MessageListener<TopicMessage> {
 			IMap<String, String> kvstore = this.client.getMap("HZ-SUBSCRIBERS-"+k);
 			kvstore.remove(this.getClientName());
 			
+			PubSubChannel chan = getChannelProps(k.toString());
+			chan.removeClient(getUniqueChannelName());
+			saveChanProps(k.toString(), chan);
+			
 	        this.publish("HZ-EVENTS", "{'eventtype':'disconnect', " +
 	        		"'channel':'"+k+"', " +
 	        		"'clientname':'"+this.getClientName()+"'," +
@@ -164,6 +168,23 @@ class Base implements MessageListener<TopicMessage> {
 			e.printStackTrace();
 		}
 	}
+	
+	
+	public PubSubChannel getChannelProps(String channelname){
+		IMap<String, PubSubChannel> kvstore = this.client.getMap("HZ-CHANNELS");
+		PubSubChannel chan = kvstore.get(channelname);
+		if (chan == null){
+			chan = new PubSubChannel();
+			chan.channelname = channelname;
+		}
+		return chan;
+	}
+	
+	public void saveChanProps(String channelname, PubSubChannel chan){
+		IMap<String, PubSubChannel> kvstore = this.client.getMap("HZ-CHANNELS");
+		kvstore.set(channelname, chan, 0, TimeUnit.SECONDS);
+	}
+
 
 	// hopefully returns a unique channel name for this client.
 	public String getUniqueChannelName() {

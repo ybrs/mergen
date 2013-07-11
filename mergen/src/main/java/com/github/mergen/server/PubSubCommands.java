@@ -88,9 +88,9 @@ public class PubSubCommands extends Controller {
 	        				  "'clientname':'"+this.base.getClientName()+"'," +
 	        			      "'identifier':'"+this.base.clientIdentifier + "'}");
 	        
-			PubSubChannel chan = this.getChannelProps(channelname);
+			PubSubChannel chan = base.getChannelProps(channelname);
 			chan.addClient(base.getUniqueChannelName());
-			saveChanProps(channelname, chan);
+			base.saveChanProps(channelname, chan);
 			
 	        /**
 	         * if we have waiting messages for this queue/channel
@@ -99,7 +99,7 @@ public class PubSubCommands extends Controller {
 	         * TODO: if its roundrobin ??
 	         * 
 	         */
-	        if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
+	        if (channelname.endsWith("-reliable") || base.getChannelProps(channelname).mustDeliver){
 		        String v;
 		        while (true){
 		        	v = this.popWaitingMessage(channelname);
@@ -148,6 +148,10 @@ public class PubSubCommands extends Controller {
 			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
 			kvstore.remove(this.base.getClientName() + "-" + this.base.getIdentifier());
 			
+			PubSubChannel chan = base.getChannelProps(channelname);
+			chan.removeClient(base.getUniqueChannelName());
+			base.saveChanProps(channelname, chan);
+			
 	        this.base.publish("HZ-EVENTS", "{'eventtype':'unsubscribed', " +
 	        		"'channel':'"+channelname+"', " +
 	        		",'clientname':'"+this.base.getClientName()+"'," +
@@ -161,21 +165,11 @@ public class PubSubCommands extends Controller {
 		// System.out.println(mr.getBuffer().toString(Charset.defaultCharset()));		
 	}
 
-	private PubSubChannel getChannelProps(String channelname){
-		IMap<String, PubSubChannel> kvstore = base.client.getMap("HZ-CHANNELS");
-		PubSubChannel chan = kvstore.get(channelname);
-		if (chan == null){
-			chan = new PubSubChannel();
-			chan.channelname = channelname;
-		}
-		return chan;
-	}
-	
 	@RedisCommand(cmd="CHANNELPROPERTIES")
 	public void channelProperties(MessageEvent e, Object[] args) {
 		String channelname = new String((byte[]) args[1]);
 		
-		PubSubChannel chan = this.getChannelProps(channelname);
+		PubSubChannel chan = base.getChannelProps(channelname);
 		
 		ServerReply sr = new ServerReply();
 		ServerReply.MultiReply mr = sr.startMultiReply();
@@ -209,7 +203,7 @@ public class PubSubCommands extends Controller {
 		/**
 		 * TODO: check arguments...
 		 */	
-		PubSubChannel chan = this.getChannelProps(channelname);
+		PubSubChannel chan = base.getChannelProps(channelname);
 		if (k.equalsIgnoreCase("mustdeliver")){
 			chan.mustDeliver = v.equalsIgnoreCase("true");
 		} else if (k.equalsIgnoreCase("requireack")){
@@ -219,15 +213,10 @@ public class PubSubCommands extends Controller {
 			chan.deliveryMethod = v;
 		}
 		
-		saveChanProps(channelname, chan);
+		base.saveChanProps(channelname, chan);
 	}
 	
 
-	private void saveChanProps(String channelname, PubSubChannel chan){
-		IMap<String, PubSubChannel> kvstore = base.client.getMap("HZ-CHANNELS");
-		kvstore.set(channelname, chan, 0, TimeUnit.SECONDS);
-	}
-	
 	@RedisCommand(cmd = "SUBSCRIBERS")
 	public void showsubscribers(MessageEvent e, Object[] args) {
 		Object object  = args[1];
@@ -265,7 +254,7 @@ public class PubSubCommands extends Controller {
 		 */
 		IMap<String, String> kvstore = this.base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
 
-		if (channelname.endsWith("-reliable") || this.getChannelProps(channelname).mustDeliver){
+		if (channelname.endsWith("-reliable") || base.getChannelProps(channelname).mustDeliver){
 			// do we have any subscribers to this channel now.
 			if (kvstore.size() == 0){
 				// store the message until it gets delivered.
@@ -275,7 +264,7 @@ public class PubSubCommands extends Controller {
 			}
 		} 
 		
-		PubSubChannel chan = this.getChannelProps(channelname);
+		PubSubChannel chan = base.getChannelProps(channelname);
 		if (chan.deliveryMethod.equals("broadcast")){
 			this.base.publish(channelname, v);
 		} else if (chan.deliveryMethod.equals("roundrobin")) {
@@ -285,7 +274,7 @@ public class PubSubCommands extends Controller {
 			// we have to save this everytime, so distributed round robin 
 			// is a little bit hard work
 			// we first save channelname then publish
-			saveChanProps(channelname, chan);
+			base.saveChanProps(channelname, chan);
 			//
 			this.base.publish(nextClient, v, channelname);
 		} else if (chan.deliveryMethod.equals("sticky")){

@@ -30,6 +30,11 @@ public class PubSubChannel implements Serializable {
 		System.out.println("adding client - " + clientId + " size:" + clients.size());
 	}
 	
+	public void removeClient(String clientId){
+		clients.remove(clientId);
+	}
+	
+	
 	public int incrementClient(){
 		return this.clientNumber++;
 	}
