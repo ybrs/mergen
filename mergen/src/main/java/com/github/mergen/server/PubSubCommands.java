@@ -276,12 +276,18 @@ public class PubSubCommands extends Controller {
 
 			// we have to save this everytime, so distributed round robin 
 			// is a little bit hard work
-			// we first save channelname then publish
+			// we first save channel props then publish
 			base.saveChanProps(channelname, chan);
 			//
 			this.base.publish(nextClient, v, channelname);
 		} else if (chan.deliveryMethod.equals("sticky")){
 			// if its sticky, always relay the same origin to the same client
+			String dest = chan.getDestination(this.base.getUniqueChannelName());
+			if (dest == null){
+				dest = chan.mapClient(this.base.getUniqueChannelName());
+				System.out.println("destination: " + dest);
+			}
+			this.base.publish(dest, v, channelname);
 		}
 		
 
