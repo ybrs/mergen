@@ -24,7 +24,7 @@ import com.github.nedis.codec.*;
 public class ServerHandler extends SimpleChannelUpstreamHandler {
 
     private final ChannelGroup channelGroup;    
-    private HazelcastInstance client;
+    private HZClient client;
     private CommandDispatcher dispatcher;
     private Controller controller;
     public Base base;
@@ -35,8 +35,8 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     public void setClient(HazelcastInstance client){
-        this.client = client;        
-        this.base = new Base(client);
+        this.client = new HZClient(client);        
+        this.base = new Base(this.client);
     }
 
     public void setDispatcher(CommandDispatcher dispatcher){

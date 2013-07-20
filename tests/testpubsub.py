@@ -6,17 +6,22 @@ import time
 import redis
 from threading import Thread
 
-def pubsubthread(identifier="testthread"):
+def pubsubthread(identifier="testthread", channels=None):
     conn = redis.Redis(host="localhost", port=6380)
     conn.execute_command("IDENTIFY", identifier)
     pubsub = conn.pubsub()
-    pubsub.subscribe(["FOO", "BAR"])
+    if not channels:
+        channels = ["FOO", "BAR"]
+
+    pubsub.subscribe(channels)
+
     try:
         for msg in pubsub.listen():
             print "in listen mode"
             print "received >>>", msg
     except:
         pass
+
 
 def execute(command):
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -48,18 +53,40 @@ class PubSubTestCase(unittest.TestCase):
                     os.path.realpath(os.path.dirname(__file__)), 
                             '..', '..', 'mergen','mergen','run.sh'))
 
-    def test_subscribers(self):
         mythread = Thread(target=execute, args=[self.mergen])
         mythread.daemon = True
         mythread.start()
         time.sleep(5)
-        conn = redis.Redis(host="localhost", port=6380)
+
+        self.conn = redis.Redis(host="localhost", port=6380)
+
+
+    def tearDown(self):
+        try:
+            self.conn.execute_command("SHUTDOWN")
+            time.sleep(3)
+        except Exception as err:
+            print err
+
+    def subscribe(self, channel):
+        """
+        starts a new thread, subscribes to a channel
+        """
+        psbth = Thread(target=pubsubthread, args=[channel])
+        psbth.daemon = True
+        psbth.start()
+        time.sleep(3)
+
+    def test_sticky(self):
+        pass
+
+    def test_subscribers(self):
         psbth = Thread(target=pubsubthread, args=["testthread"])
         psbth.daemon = True
         psbth.start()
         time.sleep(3)
 
-        subscribers = conn.execute_command("SUBSCRIBERS", "FOO")
+        subscribers = self.conn.execute_command("SUBSCRIBERS", "FOO")
         print subscribers
         assert len(subscribers) == 2
         assert subscribers[1] == "testthread"
@@ -71,16 +98,9 @@ class PubSubTestCase(unittest.TestCase):
         
         time.sleep(1)
 
-        subscribers = conn.execute_command("SUBSCRIBERS", "FOO")
-        print subscribers
-        #assert len(subscribers) == 22
+        subscribers = self.conn.execute_command("SUBSCRIBERS", "FOO")
         for i in range(1,10):
             assert "testthread-%s" % i in subscribers
-
-        try:
-            conn.execute_command("SHUTDOWN")
-        except Exception as err:
-            print err
 
 
 if __name__ == '__main__':

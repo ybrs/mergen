@@ -23,7 +23,20 @@ import com.github.nedis.codec.CommandArgs;
  */
 public class ServerCommands extends Controller {
 	private final String kvstorename = "__kvstore";
+	
+	/**
+	 * sets the namespace, so different customers, users can easily
+	 * use different databases...
+	 * @param e
+	 * @param args
+	 */
+	@RedisCommand(cmd = "DB", returns = "OK", authenticate = false)
+	public void db(MessageEvent e, Object[] args) {
+		String namespace = new String((byte[]) args[1]);
+		this.base.setNamespace(namespace);
+	}
 
+	
 	@RedisCommand(cmd = "SET", returns = "OK", authenticate = true)
 	public void set(MessageEvent e, Object[] args) {
 		String k = new String((byte[]) args[1]);
@@ -102,7 +115,7 @@ public class ServerCommands extends Controller {
 	public String ping(MessageEvent e, Object[] args) {
 		return "PONG";
 	}
-
+	
 	@RedisCommand(cmd = "AUTH", returns = "OK", authenticate = false)
 	public void auth(MessageEvent e, Object[] args) {
 		// just raise an exception if not authenticated

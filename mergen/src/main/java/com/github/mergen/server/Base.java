@@ -30,14 +30,25 @@ class Base implements MessageListener<TopicMessage> {
 	 * 
 	 */
 	public boolean authenticated = false;
-	public HazelcastInstance client;
+	public HZClient client;
 	private Map<String, Controller> pubsublist;
 	private String identifier;
 	public List<String> subscribedchannels;
 	public String clientIdentifier;
 	public int subscriptioncnt = 0;
+	
+	public String namespace = "";
 
-	public Base(HazelcastInstance client) {
+	public String getNamespace() {
+		return namespace;
+	}
+
+	public void setNamespace(String namespace) {
+		this.namespace = namespace;
+		this.client.setNamespace(namespace);
+	}
+
+	public Base(HZClient client) {
 		/**
 		 * TODO: NOTE: this complicates lock ownership, all our clients are the
 		 * lock owners since we are a proxy, imho, practically this doesnt
@@ -48,6 +59,7 @@ class Base implements MessageListener<TopicMessage> {
 		this.clientIdentifier = UUID.randomUUID().toString();
 	}
 
+	
 	public boolean isAuthenticated() {
 		return authenticated;
 	}

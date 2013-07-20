@@ -20,6 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channels;
 import java.util.*;
+import java.util.Map.Entry;
 import java.io.Serializable;
 import java.lang.annotation.*;
 import java.util.concurrent.*;
@@ -237,7 +238,23 @@ public class PubSubCommands extends Controller {
 		mr.finish();
 		e.getChannel().write(mr.getBuffer());
 	}
+
+	@RedisCommand(cmd = "ROUTING", returns = "OK")
+	public void routing(MessageEvent e, Object[] args) {
+		String channelname = new String((byte[]) args[1]);
+
+		PubSubChannel chan = base.getChannelProps(channelname);
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+
+		for (Entry<String, String> entry : chan.routing.entrySet()) {
+			mr.addString(entry.getKey() + " : " + entry.getValue());
+		}
 		
+		mr.finish();
+		e.getChannel().write(mr.getBuffer());
+	}
+	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
 	public void publish(MessageEvent e, Object[] args) {
 		String v = new String((byte[]) args[2]);
@@ -285,6 +302,7 @@ public class PubSubCommands extends Controller {
 			String dest = chan.getDestination(this.base.getUniqueChannelName());
 			if (dest == null){
 				dest = chan.mapClient(this.base.getUniqueChannelName());
+				base.saveChanProps(channelname, chan);
 				System.out.println("destination: " + dest);
 			}
 			this.base.publish(dest, v, channelname);

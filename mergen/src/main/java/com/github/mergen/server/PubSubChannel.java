@@ -27,7 +27,13 @@ public class PubSubChannel implements Serializable {
 	
 	public void AddRouting(String source, String destination){
 		this.routing.put(source, destination);
-		this.routingCounts.put(destination, 0);
+		Integer cnt = this.routingCounts.get(destination);
+		if (cnt == null){
+			cnt = 0;
+		} else {
+			cnt++;
+		}
+		this.routingCounts.put(destination, cnt);
 	}
 	
 	public String nextClient(){
@@ -77,8 +83,7 @@ public class PubSubChannel implements Serializable {
 		}
 		//
 		this.routing.put(source, foundWorker);
-		// TODO: increment
-		this.routingCounts.put(foundWorker, 0);
+		this.routingCounts.put(foundWorker, lastCnt++);
 		return foundWorker;
 	}
 	
