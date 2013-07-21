@@ -23,6 +23,16 @@ import java.util.concurrent.*;
 
 import com.github.nedis.codec.CommandArgs;
 
+class BoundKey {
+	public String map;
+	public String key;
+	
+	public BoundKey(String map, String key){
+		this.map = map;
+		this.key = key;
+	}
+}
+
 class Base implements MessageListener<TopicMessage> {
 	/**
 	 * we init this once for every connection, so you can use it like a session,
@@ -39,6 +49,16 @@ class Base implements MessageListener<TopicMessage> {
 	
 	public String namespace = "";
 
+	public List<BoundKey> boundkeys;
+	
+	public void addBoundKey(String map, String key){
+		if (this.boundkeys == null){
+			this.boundkeys = new ArrayList<BoundKey>();
+		}
+		
+		this.boundkeys.add(new BoundKey(map, key));
+	}
+	
 	public String getNamespace() {
 		return namespace;
 	}
@@ -130,6 +150,11 @@ class Base implements MessageListener<TopicMessage> {
 	        		"'channel':'"+k+"', " +
 	        		"'clientname':'"+this.getClientName()+"'," +
 	      			  "'identifier':'"+this.clientIdentifier + "'}");
+		}
+		
+		for (BoundKey b: this.boundkeys){
+			IMap<String, String> hzmap = this.client.getMap(b.map);
+			hzmap.remove(b.key);
 		}
 		
 	}

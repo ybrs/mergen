@@ -30,14 +30,14 @@ public class ServerCommands extends Controller {
 	 * @param e
 	 * @param args
 	 */
-	@RedisCommand(cmd = "DB", returns = "OK", authenticate = false)
+	@RedisCommand(cmd = "DB", returns = "OK")
 	public void db(MessageEvent e, Object[] args) {
 		String namespace = new String((byte[]) args[1]);
 		this.base.setNamespace(namespace);
 	}
 
 	
-	@RedisCommand(cmd = "SET", returns = "OK", authenticate = true)
+	@RedisCommand(cmd = "SET", returns = "OK")
 	public void set(MessageEvent e, Object[] args) {
 		String k = new String((byte[]) args[1]);
 		String v = new String((byte[]) args[2]);

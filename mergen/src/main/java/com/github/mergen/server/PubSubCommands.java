@@ -255,6 +255,23 @@ public class PubSubCommands extends Controller {
 		e.getChannel().write(mr.getBuffer());
 	}
 	
+	/**
+	 * sets a key bound to the client, if the client disconnects
+	 * the key will be removed.
+	 * @param e
+	 * @param args
+	 */
+	@RedisCommand(cmd = "BHSET", returns = "OK")
+	public void chanset(MessageEvent e, Object[] args) {
+		String map = new String((byte[]) args[1]);
+		String k = new String((byte[]) args[2]);
+		String v = new String((byte[]) args[3]);
+		IMap<String, String> kvstore = base.client.getMap(map);
+		kvstore.set(k, v, 0, TimeUnit.SECONDS);
+		//
+		this.base.addBoundKey(map, k);
+	}
+	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
 	public void publish(MessageEvent e, Object[] args) {
 		String v = new String((byte[]) args[2]);
