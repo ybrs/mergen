@@ -49,14 +49,18 @@ class Base implements MessageListener<TopicMessage> {
 	
 	public String namespace = "";
 
-	public List<BoundKey> boundkeys;
+	public Map<String, BoundKey> boundkeys;
+
 	
 	public void addBoundKey(String map, String key){
 		if (this.boundkeys == null){
-			this.boundkeys = new ArrayList<BoundKey>();
+			this.boundkeys = new ConcurrentHashMap<String, BoundKey>();
 		}
 		
-		this.boundkeys.add(new BoundKey(map, key));
+		String mkey = "map:::" + map + ":::" + key;
+		if (!this.boundkeys.containsKey(mkey)){
+			this.boundkeys.put(mkey, new BoundKey(map, key));
+		}
 	}
 	
 	public String getNamespace() {
@@ -153,8 +157,8 @@ class Base implements MessageListener<TopicMessage> {
 		}
 		
 		if (this.boundkeys != null){
-			for (BoundKey b: this.boundkeys){
-				System.out.println("removing ::: " + b.map + " : " + b.key);
+			for (BoundKey b: this.boundkeys.values()){
+				System.out.println("removing " + b.map + " : " + b.key);
 				IMap<String, String> hzmap = this.client.getMap(b.map);
 				hzmap.remove(b.key);
 			}
