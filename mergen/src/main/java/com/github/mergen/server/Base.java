@@ -152,9 +152,12 @@ class Base implements MessageListener<TopicMessage> {
 	      			  "'identifier':'"+this.clientIdentifier + "'}");
 		}
 		
-		for (BoundKey b: this.boundkeys){
-			IMap<String, String> hzmap = this.client.getMap(b.map);
-			hzmap.remove(b.key);
+		if (this.boundkeys != null){
+			for (BoundKey b: this.boundkeys){
+				System.out.println("removing ::: " + b.map + " : " + b.key);
+				IMap<String, String> hzmap = this.client.getMap(b.map);
+				hzmap.remove(b.key);
+			}
 		}
 		
 	}
