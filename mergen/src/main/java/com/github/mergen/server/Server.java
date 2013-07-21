@@ -34,9 +34,12 @@ import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.XmlConfigBuilder;
+import com.hazelcast.core.Cluster;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.MembershipEvent;
+import com.hazelcast.core.MembershipListener;
 import com.hazelcast.query.SqlPredicate;
 
 import com.beust.jcommander.JCommander;
@@ -54,9 +57,9 @@ public class Server {
 
 	private ChannelGroup channels;
 	private Timer timer;
-	
+
 	private long cnt = 0;
-	
+
 	private ServerBootstrap bootstrap;
 	private HazelcastInstance client;
 	private CommandDispatcher dispatcher;
@@ -64,8 +67,8 @@ public class Server {
 	private ServerCommandLineArguments jct;
 	private ChannelPipelineFactory pipelineFactory;
 
-	// public List<RedisListener> listeners;	
-	
+	// public List<RedisListener> listeners;
+
 	public Server(ServerCommandLineArguments jct) {
 		this.host = jct.host;
 		this.port = jct.port;
@@ -77,20 +80,21 @@ public class Server {
 
 	}
 
-	public void configurePersistence(Config cfg){
+	public void configurePersistence(Config cfg) {
 		/** persistence related config **/
 		MapConfig mapConfig = new MapConfig("*");
 		MapStoreConfig mapstoreconfig = mapConfig.getMapStoreConfig();
-		if ( mapstoreconfig == null ){
+		if (mapstoreconfig == null) {
 			mapstoreconfig = new MapStoreConfig();
-		}		
-		mapstoreconfig.setFactoryClassName(this.jct.persistence_class).setEnabled(true);
+		}
+		mapstoreconfig.setFactoryClassName(this.jct.persistence_class)
+				.setEnabled(true);
 		mapstoreconfig.setWriteDelaySeconds(this.jct.persistence_write_delay);
 		mapstoreconfig.setProperty("servers", this.jct.persistence_servers);
 		mapConfig.setMapStoreConfig(mapstoreconfig);
-		cfg.addMapConfig(mapConfig);		
+		cfg.addMapConfig(mapConfig);
 	}
-	
+
 	public void prepare() {
 		System.out.println("prepare");
 		channels = new DefaultChannelGroup();
@@ -99,56 +103,74 @@ public class Server {
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
-		
+
 		MapConfig mapConfig = new MapConfig("HZ-CHANNELS");
-        NearCacheConfig nearCacheConfig = new NearCacheConfig();
+		NearCacheConfig nearCacheConfig = new NearCacheConfig();
 		mapConfig.setNearCacheConfig(nearCacheConfig);
-		
+
 		Config cfg;
-		
-		if (this.jct.configpath != ""){
+
+		if (this.jct.configpath != "") {
 			System.out.println("reading config from " + this.jct.configpath);
-				try {
-					cfg = new XmlConfigBuilder(this.jct.configpath).build();
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-					System.out.println("couldnt find config file, proceeding with defaults !!!");
-					cfg = new Config();
-				}
-			System.out.println("reading config from " + this.jct.configpath + " DONE ");
+			try {
+				cfg = new XmlConfigBuilder(this.jct.configpath).build();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				System.out
+						.println("couldnt find config file, proceeding with defaults !!!");
+				cfg = new Config();
+			}
+			System.out.println("reading config from " + this.jct.configpath
+					+ " DONE ");
 		} else {
 			cfg = new Config();
 		}
-		
-		if (this.jct.persistence.equals("true")  || this.jct.persistence.equals("on")){
+
+		if (this.jct.persistence.equals("true")
+				|| this.jct.persistence.equals("on")) {
 			configurePersistence(cfg);
 		}
-		
+
 		NetworkConfig network = cfg.getNetworkConfig();
-		
-		if (this.jct.publicipaddress != ""){
-			System.out.println("setting public ip address: " + this.jct.publicipaddress);
+
+		if (this.jct.publicipaddress != "") {
+			System.out.println("setting public ip address: "
+					+ this.jct.publicipaddress);
 			network.setPublicAddress(this.jct.publicipaddress);
 		}
-		
-		
-		Join join = network.getJoin();		
-		
-		if ((this.jct.multicastgroup!="") && (this.jct.multicastport>0)){
+
+		Join join = network.getJoin();
+
+		if ((this.jct.multicastgroup != "") && (this.jct.multicastport > 0)) {
 			join.getMulticastConfig()
-				.setMulticastGroup(this.jct.multicastgroup)
-				.setMulticastPort(this.jct.multicastport)
-				.setEnabled(true);
+					.setMulticastGroup(this.jct.multicastgroup)
+					.setMulticastPort(this.jct.multicastport).setEnabled(true);
 		} else {
 			join.getMulticastConfig().setEnabled(false);
 		}
-		
-		for (String ns: this.jct.hzcluster) {
+
+		for (String ns : this.jct.hzcluster) {
 			join.getTcpIpConfig().addMember(ns);
-		} 
-		
-		join.getTcpIpConfig().setEnabled(true);				
+		}
+
+		join.getTcpIpConfig().setEnabled(true);
 		client = Hazelcast.newHazelcastInstance(cfg);
+		
+		Cluster hzcluster = client.getCluster();
+		hzcluster.addMembershipListener(new MembershipListener(){
+
+			@Override
+			public void memberAdded(MembershipEvent membershipEvent) {
+		        System.out.println("MemberAdded " + membershipEvent);				
+			}
+
+			@Override
+			public void memberRemoved(MembershipEvent membershipEvent) {
+		        System.out.println("MemberRemoved " + membershipEvent);
+		        // membershipEvent.getMember().getUuid();
+			}
+			
+		});
 		
 		/*
 		 * We build up the dispatcher now ! Wish java had mixins
@@ -161,24 +183,23 @@ public class Server {
 		klasses.add(PubSubCommands.class);
 		dispatcher = new CommandDispatcher(klasses);
 
-		
 		final Map<String, Controller> subscriptions = new ConcurrentHashMap<String, Controller>();
-		
+
 		pipelineFactory = new ChannelPipelineFactory() {
 			@Override
 			public ChannelPipeline getPipeline() throws Exception {
-				
+
 				cnt = cnt + 1;
-				
-				if (cnt > Long.MAX_VALUE - 1){
+
+				if (cnt > Long.MAX_VALUE - 1) {
 					cnt = 0;
 				}
-				
+
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
-				handler.setPubSubList(subscriptions, cnt);								
-				
+				handler.setPubSubList(subscriptions, cnt);
+
 				ChannelPipeline pipeline = Channels.pipeline();
 				// pipeline.addLast("encoder", Encoder.getInstance());
 				// pipeline.addLast("encoder", Command);
@@ -187,7 +208,7 @@ public class Server {
 				return pipeline;
 			}
 		};
-				
+
 	}
 
 	private XmlConfigBuilder XmlConfigBuilder(String configpath) {
@@ -223,39 +244,39 @@ public class Server {
 
 	public static void main(String[] args) {
 
-        ServerCommandLineArguments jct_ = new ServerCommandLineArguments();    
-        new JCommander(jct_, args);
+		ServerCommandLineArguments jct_ = new ServerCommandLineArguments();
+		new JCommander(jct_, args);
 
-        System.out.println("listening on "+ jct_.host + ":" + jct_.port +"");
+		System.out.println("listening on " + jct_.host + ":" + jct_.port + "");
 
-        final Server server = new Server(jct_);
-        
-        server.prepare();
-        
-        final long timeToWait = 1000 ;
-         
-        		
-        while(true) {
-        	try {
-        		server.start();
-        		break;
-        	} catch (Exception e) {
-        		server.port = server.port + 1;
-        		try {        			
-        			Thread.sleep(timeToWait);        		
-        		} catch (InterruptedException i1) {
-        			// pass 
-        		}
-        	}
-        }        
-        
-        System.out.println("Mergen Server listening for commands on " + server.port);
+		final Server server = new Server(jct_);
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                server.stop();
-            }
-        });
-    }
+		server.prepare();
+
+		final long timeToWait = 1000;
+
+		while (true) {
+			try {
+				server.start();
+				break;
+			} catch (Exception e) {
+				server.port = server.port + 1;
+				try {
+					Thread.sleep(timeToWait);
+				} catch (InterruptedException i1) {
+					// pass
+				}
+			}
+		}
+
+		System.out.println("Mergen Server listening for commands on "
+				+ server.port);
+
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				server.stop();
+			}
+		});
+	}
 }
