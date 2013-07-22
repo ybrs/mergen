@@ -173,7 +173,7 @@ public class Server {
 
 			@Override
 			public void memberRemoved(MembershipEvent membershipEvent) {
-		        System.out.println("MemberRemoved " + membershipEvent);
+		        System.out.println("MemberRemoved" + membershipEvent);
 		        // on disconnect we have to make sure bound keys are
 		        // cleaned up and subscribers list are still correct.
 		        // so we start a cleanup process
@@ -210,7 +210,14 @@ public class Server {
 					cnt = 0;
 				}
 
-				if (!clusterLocks.tryLock("clusterlock", 10, TimeUnit.SECONDS)){
+				System.out.println("client connecting");
+				boolean acquireLock = clusterLocks.tryLock("clusterlock", 10, TimeUnit.SECONDS);
+				if (acquireLock){
+					// we unlock immediately, since we dont care about the lock,
+					// we just check if there is a lock...
+					System.out.println("lock acquired - unlocking");
+					clusterLocks.unlock("clusterlock");
+				} else {
 					// this is to prevent race conditions.
 					// eg. client sets bound keys, and connected mergen instance crashed
 					// another mergen instance clears those bound keys, since the client 
@@ -218,9 +225,10 @@ public class Server {
 					// and sets its keys again. so we have a chaos.
 					// we wait for 10 seconds and wait for the cleanup
 					// or else throw an exception
+					System.out.println("cluster is locked !!!");
 					throw new Exception("cluster is locked");
 				}
-				
+				System.out.println("client connected");
 				
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
@@ -232,9 +240,6 @@ public class Server {
 				// pipeline.addLast("encoder", Command);
 				pipeline.addLast("decoder", new RedisDecoder());
 				pipeline.addLast("handler", handler);
-				
-				clusterLocks.unlock("clusterlock");
-				
 				return pipeline;
 			}
 		};

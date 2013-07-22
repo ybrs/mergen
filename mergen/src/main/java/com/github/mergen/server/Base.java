@@ -85,9 +85,9 @@ class Base implements MessageListener<TopicMessage> {
 	}
 
 	public void subscribedToChannel(String channelName) {
-		this.subscribedchannels
-				.add(new SubscribedChannel(this.getNamespace(), channelName,
-						this.getClientName(), this.getUniqueChannelName(), this.clientIdentifier));
+		this.subscribedchannels.add(new SubscribedChannel(this.getNamespace(),
+				channelName, this.getClientName(), this.getUniqueChannelName(),
+				this.clientIdentifier));
 	}
 
 	public String getNamespace() {
@@ -155,20 +155,22 @@ class Base implements MessageListener<TopicMessage> {
 			e1.printStackTrace();
 			localhostname = "unknown";
 		}
-		
+
 		String n = ManagementFactory.getRuntimeMXBean().getName();
 
-		String clientname = localhostname + "-" + n + "-" + this.getIdentifier();
+		String clientname = localhostname + "-" + n + "-"
+				+ this.getIdentifier();
 		return clientname;
 	}
 
 	public void clientDisconnected() {
-		System.out.println("Client Disconnected - starting to cleanup ");
+		System.out.println("Client Disconnected");
 		this.removeAllListeners();
 		this.removeBoundKeys();
 	}
 
-	static public void sremoveAllListeners(String uuid, HazelcastInstance client, Base publisher) {
+	static public void sremoveAllListeners(String uuid,
+			HazelcastInstance client, Base publisher) {
 		IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
 		System.out.println("cluster locked - 2");
 		if (clusterLocks.tryLock("clusterlock")) {
@@ -176,36 +178,38 @@ class Base implements MessageListener<TopicMessage> {
 				IList<SubscribedChannel> subscribedchannels = client
 						.getList("HZ-SUBSCRIBED-CHANNELS-" + uuid);
 				for (SubscribedChannel k : subscribedchannels) {
-					System.out.println("Disconnected - removing listener [" + k.db
-							+ "::" + k.channelName + "]");
+					System.out.println("Disconnected - removing listener ["
+							+ k.db + "::" + k.channelName + "]");
 					// this is namespaced.
 					IMap<String, String> kvstore = client.getMap(k.db + "::"
 							+ "HZ-SUBSCRIBERS-" + k);
 					kvstore.remove(k.clientName);
 					// this is also namespaced
-					IMap<String, PubSubChannel> chanstoremap = client.getMap(k.db
-							+ "::HZ-CHANNELS");
+					IMap<String, PubSubChannel> chanstoremap = client
+							.getMap(k.db + "::HZ-CHANNELS");
 					PubSubChannel chan = chanstoremap.get(k.channelName);
 					if (chan != null) {
 						chan.removeClient(k.uniqueChannelName);
-						chanstoremap.set(k.channelName, chan, 0, TimeUnit.SECONDS);
+						chanstoremap.set(k.channelName, chan, 0,
+								TimeUnit.SECONDS);
 					}
-		
+
 					publisher.publish("HZ-EVENTS",
-							"{'eventtype':'disconnect', " + "'channel':'" + k.channelName + "', "
-									+ "'clientname':'" + k.clientName + "',"
-									+ "'identifier':'" + k.clientIdentifier + "'}");
+							"{'eventtype':'disconnect', " + "'channel':'"
+									+ k.channelName + "', " + "'clientname':'"
+									+ k.clientName + "'," + "'identifier':'"
+									+ k.clientIdentifier + "'}");
 				}
 				// client is disconnected so nothing left subscribed...
 				subscribedchannels.clear();
-			} catch (Exception exc){
+			} catch (Exception exc) {
 				System.out.println("exception on remove all listeners");
 				exc.printStackTrace();
 			}
-			
+
 			System.out.println("cluster unlocked 2 !!!!");
 			clusterLocks.unlock("clusterlock");
-		} 
+		}
 	}
 
 	static public void sremoveBoundkeys(String uuid, HazelcastInstance client) {
@@ -214,7 +218,7 @@ class Base implements MessageListener<TopicMessage> {
 		String boundKeysMapName = "HZ-BOUNDKEYS-" + uuid;
 		IMap<String, BoundKey> boundkeys = client.getMap(boundKeysMapName);
 		IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
-		
+
 		System.out.println("cluster locked - 1");
 		if (clusterLocks.tryLock("clusterlock")) {
 			try {
@@ -250,7 +254,8 @@ class Base implements MessageListener<TopicMessage> {
 
 	public void removeAllListeners() {
 		System.out.println("remove listeners...");
-		Base.sremoveAllListeners(this.client.getCluster().getLocalMember().getUuid(), this.client.getClient(), this);
+		Base.sremoveAllListeners(this.client.getCluster().getLocalMember()
+				.getUuid(), this.client.getClient(), this);
 	}
 
 	@Override
