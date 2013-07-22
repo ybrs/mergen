@@ -29,6 +29,23 @@ class BoundKey implements Serializable {
 	}
 }
 
+class SubscribedChannel implements Serializable {
+	public String db;
+	public String channelName;
+	public String clientName;
+	public String uniqueChannelName;
+	public String clientIdentifier;
+
+	public SubscribedChannel(String db, String channelName, String clientName,
+			String uniqueChannelName, String clientIdentifier) {
+		this.db = db;
+		this.channelName = channelName;
+		this.clientName = clientName;
+		this.uniqueChannelName = uniqueChannelName;
+		this.clientIdentifier = clientIdentifier;
+	}
+}
+
 class Base implements MessageListener<TopicMessage> {
 	/**
 	 * we init this once for every connection, so you can use it like a session,
@@ -39,29 +56,37 @@ class Base implements MessageListener<TopicMessage> {
 	public HZClient client;
 	private Map<String, Controller> pubsublist;
 	private String identifier;
-	public IList<String> subscribedchannels;
+	public IList<SubscribedChannel> subscribedchannels;
 	public String clientIdentifier;
 	public int subscriptioncnt = 0;
 	public String namespace = "default";
 	public IMap<String, BoundKey> boundkeys;
 
-	public void addBoundKey(String map, String key) {
+	public void addBoundKey(String map, String key) throws Exception {
 		if (this.boundkeys == null) {
 			// these shouldn't be namespaced
 			String boundKeysMapName = "HZ-BOUNDKEYS-"
-					+ this.client.getClient().getCluster().getLocalMember().getUuid();
-			
-			System.out.println("boundkeymap - " + boundKeysMapName);
-
+					+ this.client.getClient().getCluster().getLocalMember()
+							.getUuid();
 			this.boundkeys = this.client.getClient().getMap(boundKeysMapName);
-			IMap<String, String> clusterLocks = this.client.getClient().getMap("HZ-CLUSTER-LOCK");
+
+			IMap<String, String> clusterLocks = this.client.getClient().getMap(
+					"HZ-CLUSTER-LOCK");
 			clusterLocks.set(boundKeysMapName, "1", 0, TimeUnit.SECONDS);
 		}
 
-		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::" + key;
+		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::"
+				+ key;
 		if (!this.boundkeys.containsKey(mkey)) {
-			this.boundkeys.put(mkey, new BoundKey(this.getNamespace(), map, key));
+			this.boundkeys.put(mkey,
+					new BoundKey(this.getNamespace(), map, key));
 		}
+	}
+
+	public void subscribedToChannel(String channelName) {
+		this.subscribedchannels
+				.add(new SubscribedChannel(this.getNamespace(), channelName,
+						this.getClientName(), this.getUniqueChannelName(), this.clientIdentifier));
 	}
 
 	public String getNamespace() {
@@ -74,14 +99,11 @@ class Base implements MessageListener<TopicMessage> {
 	}
 
 	public Base(HZClient client) {
-		/**
-		 * TODO: NOTE: this complicates lock ownership, all our clients are the
-		 * lock owners since we are a proxy, imho, practically this doesnt
-		 * change anything, revisit after pub/sub/topic...
-		 **/
 		this.client = client;
-		this.subscribedchannels = this.client.getList("HZ-SUBSCRIBED-CHANNELS-"
-				+ this.client.getCluster().getLocalMember().getUuid());
+		// this shouldnt be namespaced.
+		this.subscribedchannels = this.client.getClient().getList(
+				"HZ-SUBSCRIBED-CHANNELS-"
+						+ this.client.getCluster().getLocalMember().getUuid());
 		this.clientIdentifier = UUID.randomUUID().toString();
 		this.setNamespace("default");
 	}
@@ -136,63 +158,95 @@ class Base implements MessageListener<TopicMessage> {
 		return clientname;
 	}
 
-	public void clientDisconnected(){
+	public void clientDisconnected() {
 		System.out.println("Client Disconnected - starting to cleanup ");
 		this.removeAllListeners();
 		this.removeBoundKeys();
 	}
-	
-	static public void sremoveBoundkeys(String uuid, HazelcastInstance client2){
+
+	static public void sremoveAllListeners(String uuid, HazelcastInstance client, Base publisher) {
+		IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
+		System.out.println("cluster locked - 2");
+		if (clusterLocks.tryLock("clusterlock")) {
+			try {
+				IList<SubscribedChannel> subscribedchannels = client
+						.getList("HZ-SUBSCRIBED-CHANNELS-" + uuid);
+				for (SubscribedChannel k : subscribedchannels) {
+					System.out.println("Disconnected - removing listener [" + k.db
+							+ "::" + k.channelName + "]");
+					// this is namespaced.
+					IMap<String, String> kvstore = client.getMap(k.db + "::"
+							+ "HZ-SUBSCRIBERS-" + k);
+					kvstore.remove(k.clientName);
+					// this is also namespaced
+					IMap<String, PubSubChannel> chanstoremap = client.getMap(k.db
+							+ "::HZ-CHANNELS");
+					PubSubChannel chan = chanstoremap.get(k.channelName);
+					if (chan != null) {
+						chan.removeClient(k.uniqueChannelName);
+						chanstoremap.set(k.channelName, chan, 0, TimeUnit.SECONDS);
+					}
+		
+					publisher.publish("HZ-EVENTS",
+							"{'eventtype':'disconnect', " + "'channel':'" + k.channelName + "', "
+									+ "'clientname':'" + k.clientName + "',"
+									+ "'identifier':'" + k.clientIdentifier + "'}");
+				}
+				// client is disconnected so nothing left subscribed...
+				subscribedchannels.clear();
+			} catch (Exception exc){
+				System.out.println("exception on remove all listeners");
+				exc.printStackTrace();
+			}
+			
+			System.out.println("cluster unlocked 2 !!!!");
+			clusterLocks.unlock("clusterlock");
+		} 
+	}
+
+	static public void sremoveBoundkeys(String uuid, HazelcastInstance client) {
 		System.out.println("removing bound keys");
 		// we dont want these maps to be namespaced.
 		String boundKeysMapName = "HZ-BOUNDKEYS-" + uuid;
-		IMap<String, BoundKey> boundkeys = client2.getMap(boundKeysMapName);
-		IMap<String, String> clusterLocks = client2.getMap("HZ-CLUSTER-LOCK");
+		IMap<String, BoundKey> boundkeys = client.getMap(boundKeysMapName);
+		IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
 		
-		if (clusterLocks.tryLock(boundKeysMapName)){
-			System.out.println("acquired lock - " + boundKeysMapName);
-			for (BoundKey b : boundkeys.values()) {
-				System.out.println("removing " + b.db + ":" + b.map + " : " + b.key);
-				System.out.println("keymapname [" + b.db + "::" + b.map + "]");
-				IMap<String, String> hzmap = client2.getMap(b.db + "::" + b.map);
-				System.out.println("keys::: ---- " + hzmap.keySet());
-				hzmap.remove(b.key);
+		System.out.println("cluster locked - 1");
+		if (clusterLocks.tryLock("clusterlock")) {
+			try {
+				// we lock the whole cluster here, because
+				// until we cleanup the bound keys, the client shouldnt
+				// set the bound keys again.
+				if (clusterLocks.tryLock(boundKeysMapName)) {
+					System.out.println("acquired lock - " + boundKeysMapName);
+					for (BoundKey b : boundkeys.values()) {
+						IMap<String, String> hzmap = client.getMap(b.db + "::"
+								+ b.map);
+						hzmap.remove(b.key);
+					}
+					clusterLocks.unlock(boundKeysMapName);
+				} else {
+					System.out.println("couldnt acquire lock on - "
+							+ boundKeysMapName);
+				}
+			} catch (Exception exc) {
+				System.out.println("exception on removing bound keys");
+				exc.printStackTrace();
 			}
-			clusterLocks.unlock(boundKeysMapName);
-		} else {
-			System.out.println("couldnt acquire lock on - " + boundKeysMapName);
+			clusterLocks.unlock("clusterlock");
+			System.out.println("cluster unlocked !!!");
 		}
 	}
-	
-	public void removeBoundKeys(){
+
+	public void removeBoundKeys() {
 		System.out.println("remove bound keys");
-		Base.sremoveBoundkeys(this.client.getCluster().getLocalMember().getUuid(), this.client.getClient());
+		Base.sremoveBoundkeys(this.client.getCluster().getLocalMember()
+				.getUuid(), this.client.getClient());
 	}
-	
+
 	public void removeAllListeners() {
-		/*
-		 * this only works on disconnect
-		 */
-
-		for (Object k : this.subscribedchannels) {
-			System.out.println("Disconnected - removing listener "
-					+ k.toString());
-			ITopic topic = this.client.getTopic(k.toString());
-			topic.removeMessageListener(this);
-			//
-			IMap<String, String> kvstore = this.client.getMap("HZ-SUBSCRIBERS-"
-					+ k);
-			kvstore.remove(this.getClientName());
-
-			PubSubChannel chan = getChannelProps(k.toString());
-			chan.removeClient(getUniqueChannelName());
-			saveChanProps(k.toString(), chan);
-
-			this.publish("HZ-EVENTS",
-					"{'eventtype':'disconnect', " + "'channel':'" + k + "', "
-							+ "'clientname':'" + this.getClientName() + "',"
-							+ "'identifier':'" + this.clientIdentifier + "'}");
-		}
+		System.out.println("remove listeners...");
+		Base.sremoveAllListeners(this.client.getCluster().getLocalMember().getUuid(), this.client.getClient(), this);
 	}
 
 	@Override

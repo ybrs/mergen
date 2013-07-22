@@ -21,6 +21,7 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
 import java.net.InetSocketAddress;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 // import com.github.nedis.pubsub.RedisListener;
 import com.github.mergen.persistence.DummyStore;
@@ -156,6 +157,12 @@ public class Server {
 		join.getTcpIpConfig().setEnabled(true);
 		client = Hazelcast.newHazelcastInstance(cfg);
 		
+		final IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
+		if (clusterLocks.get("clusterlock") == null){
+			// we are putting a key, if not exists just to lock further
+			clusterLocks.set("clusterlock", "1", 0, TimeUnit.SECONDS);
+		}
+		
 		Cluster hzcluster = client.getCluster();
 		hzcluster.addMembershipListener(new MembershipListener(){
 
@@ -172,6 +179,10 @@ public class Server {
 		        // so we start a cleanup process
 		        String uuid = membershipEvent.getMember().getUuid();
 		        Base.sremoveBoundkeys(uuid, client);
+		        // we need a new base here because we publish disconnected
+		        // event to other subscribers.
+		        Base publisher = new Base(new HZClient(client));
+		        Base.sremoveAllListeners(uuid, client, publisher);
 			}
 			
 		});
@@ -199,6 +210,18 @@ public class Server {
 					cnt = 0;
 				}
 
+				if (!clusterLocks.tryLock("clusterlock", 10, TimeUnit.SECONDS)){
+					// this is to prevent race conditions.
+					// eg. client sets bound keys, and connected mergen instance crashed
+					// another mergen instance clears those bound keys, since the client 
+					// is disconnected, meanwhile the client reconnects
+					// and sets its keys again. so we have a chaos.
+					// we wait for 10 seconds and wait for the cleanup
+					// or else throw an exception
+					throw new Exception("cluster is locked");
+				}
+				
+				
 				ServerHandler handler = new ServerHandler(channelGroup);
 				handler.setClient(client);
 				handler.setDispatcher(dispatcher);
@@ -209,6 +232,9 @@ public class Server {
 				// pipeline.addLast("encoder", Command);
 				pipeline.addLast("decoder", new RedisDecoder());
 				pipeline.addLast("handler", handler);
+				
+				clusterLocks.unlock("clusterlock");
+				
 				return pipeline;
 			}
 		};

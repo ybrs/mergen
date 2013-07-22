@@ -76,7 +76,7 @@ public class PubSubCommands extends Controller {
 	        ITopic topic = this.base.client.getTopic(channelname);
 	        topic.addMessageListener(this.base);
 
-	        this.base.subscribedchannels.add(channelname);
+	        this.base.subscribedToChannel(channelname);
 	        
 			IMap<String, String> kvstore = base.client.getMap("HZ-SUBSCRIBERS-"+channelname);
 
@@ -260,16 +260,21 @@ public class PubSubCommands extends Controller {
 	 * the key will be removed.
 	 * @param e
 	 * @param args
+	 * @throws Exception 
 	 */
 	@RedisCommand(cmd = "BHSET", returns = "OK")
-	public void chanset(MessageEvent e, Object[] args) {
+	public void chanset(MessageEvent e, Object[] args) throws Exception {
 		String map = new String((byte[]) args[1]);
 		String k = new String((byte[]) args[2]);
 		String v = new String((byte[]) args[3]);
 		IMap<String, String> kvstore = base.client.getMap(map);
 		kvstore.set(k, v, 0, TimeUnit.SECONDS);
-		//
-		this.base.addBoundKey(map, k);
+		try {
+			this.base.addBoundKey(map, k);
+		} catch (Exception exc){
+			System.out.println("exception on BHSET - " + exc.getMessage());
+			throw exc;
+		}
 	}
 	
 	@RedisCommand(cmd = "PUBLISH", returns = "OK")
