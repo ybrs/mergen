@@ -46,7 +46,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
     	System.out.println("disconnected brother - " + this.base.getIdentifier());
-    	this.base.removeAllListeners();
+    	this.base.clientDisconnected();
     }
 
     @Override

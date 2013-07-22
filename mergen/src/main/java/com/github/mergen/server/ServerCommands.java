@@ -25,7 +25,7 @@ public class ServerCommands extends Controller {
 	private final String kvstorename = "__kvstore";
 	
 	/**
-	 * sets the namespace, so different customers, users can easily
+	 * sets the namespace, so different customers/users can easily
 	 * use different databases...
 	 * @param e
 	 * @param args

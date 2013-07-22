@@ -1,5 +1,6 @@
 package com.github.mergen.server;
 
+import java.io.Serializable;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,18 +9,23 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ITopic;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
 
-class BoundKey {
+class BoundKey implements Serializable {
+
 	public String map;
 	public String key;
+	public String db;
 
-	public BoundKey(String map, String key) {
+	public BoundKey(String db, String map, String key) {
 		this.map = map;
 		this.key = key;
+		this.db = db;
 	}
 }
 
@@ -33,25 +39,33 @@ class Base implements MessageListener<TopicMessage> {
 	public HZClient client;
 	private Map<String, Controller> pubsublist;
 	private String identifier;
-	public List<String> subscribedchannels;
+	public IList<String> subscribedchannels;
 	public String clientIdentifier;
 	public int subscriptioncnt = 0;
-	public String namespace = "";
-	public Map<String, BoundKey> boundkeys;
+	public String namespace = "default";
+	public IMap<String, BoundKey> boundkeys;
 
 	public void addBoundKey(String map, String key) {
 		if (this.boundkeys == null) {
-			this.boundkeys = new ConcurrentHashMap<String, BoundKey>();
+			// these shouldn't be namespaced
+			String boundKeysMapName = "HZ-BOUNDKEYS-"
+					+ this.client.getClient().getCluster().getLocalMember().getUuid();
+			
+			System.out.println("boundkeymap - " + boundKeysMapName);
+
+			this.boundkeys = this.client.getClient().getMap(boundKeysMapName);
+			IMap<String, String> clusterLocks = this.client.getClient().getMap("HZ-CLUSTER-LOCK");
+			clusterLocks.set(boundKeysMapName, "1", 0, TimeUnit.SECONDS);
 		}
 
-		String mkey = "map:::" + map + ":::" + key;
+		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::" + key;
 		if (!this.boundkeys.containsKey(mkey)) {
-			this.boundkeys.put(mkey, new BoundKey(map, key));
+			this.boundkeys.put(mkey, new BoundKey(this.getNamespace(), map, key));
 		}
 	}
 
 	public String getNamespace() {
-		return namespace;
+		return this.namespace;
 	}
 
 	public void setNamespace(String namespace) {
@@ -66,8 +80,10 @@ class Base implements MessageListener<TopicMessage> {
 		 * change anything, revisit after pub/sub/topic...
 		 **/
 		this.client = client;
-		this.subscribedchannels = new ArrayList<String>();
+		this.subscribedchannels = this.client.getList("HZ-SUBSCRIBED-CHANNELS-"
+				+ this.client.getCluster().getLocalMember().getUuid());
 		this.clientIdentifier = UUID.randomUUID().toString();
+		this.setNamespace("default");
 	}
 
 	public boolean isAuthenticated() {
@@ -120,11 +136,45 @@ class Base implements MessageListener<TopicMessage> {
 		return clientname;
 	}
 
+	public void clientDisconnected(){
+		System.out.println("Client Disconnected - starting to cleanup ");
+		this.removeAllListeners();
+		this.removeBoundKeys();
+	}
+	
+	static public void sremoveBoundkeys(String uuid, HazelcastInstance client2){
+		System.out.println("removing bound keys");
+		// we dont want these maps to be namespaced.
+		String boundKeysMapName = "HZ-BOUNDKEYS-" + uuid;
+		IMap<String, BoundKey> boundkeys = client2.getMap(boundKeysMapName);
+		IMap<String, String> clusterLocks = client2.getMap("HZ-CLUSTER-LOCK");
+		
+		if (clusterLocks.tryLock(boundKeysMapName)){
+			System.out.println("acquired lock - " + boundKeysMapName);
+			for (BoundKey b : boundkeys.values()) {
+				System.out.println("removing " + b.db + ":" + b.map + " : " + b.key);
+				System.out.println("keymapname [" + b.db + "::" + b.map + "]");
+				IMap<String, String> hzmap = client2.getMap(b.db + "::" + b.map);
+				System.out.println("keys::: ---- " + hzmap.keySet());
+				hzmap.remove(b.key);
+			}
+			clusterLocks.unlock(boundKeysMapName);
+		} else {
+			System.out.println("couldnt acquire lock on - " + boundKeysMapName);
+		}
+	}
+	
+	public void removeBoundKeys(){
+		System.out.println("remove bound keys");
+		Base.sremoveBoundkeys(this.client.getCluster().getLocalMember().getUuid(), this.client.getClient());
+	}
+	
 	public void removeAllListeners() {
 		/*
 		 * this only works on disconnect
 		 */
-		for (Object k : this.subscribedchannels.toArray()) {
+
+		for (Object k : this.subscribedchannels) {
 			System.out.println("Disconnected - removing listener "
 					+ k.toString());
 			ITopic topic = this.client.getTopic(k.toString());
@@ -143,15 +193,6 @@ class Base implements MessageListener<TopicMessage> {
 							+ "'clientname':'" + this.getClientName() + "',"
 							+ "'identifier':'" + this.clientIdentifier + "'}");
 		}
-
-		if (this.boundkeys != null) {
-			for (BoundKey b : this.boundkeys.values()) {
-				System.out.println("removing " + b.map + " : " + b.key);
-				IMap<String, String> hzmap = this.client.getMap(b.map);
-				hzmap.remove(b.key);
-			}
-		}
-
 	}
 
 	@Override

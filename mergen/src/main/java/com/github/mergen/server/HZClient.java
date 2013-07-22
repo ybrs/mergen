@@ -44,7 +44,9 @@ public class HZClient implements HazelcastInstance{
 	}
 	
 	public String getNamespaced(String k){
-		return this.namespace + "::" + k;
+		String namespaced = this.namespace + "::" + k;
+		System.out.println(">>>>" + namespaced);
+		return namespaced;
 	}
 
 	public String getNamespace() {

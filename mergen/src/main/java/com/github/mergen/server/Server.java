@@ -167,7 +167,11 @@ public class Server {
 			@Override
 			public void memberRemoved(MembershipEvent membershipEvent) {
 		        System.out.println("MemberRemoved " + membershipEvent);
-		        // membershipEvent.getMember().getUuid();
+		        // on disconnect we have to make sure bound keys are
+		        // cleaned up and subscribers list are still correct.
+		        // so we start a cleanup process
+		        String uuid = membershipEvent.getMember().getUuid();
+		        Base.sremoveBoundkeys(uuid, client);
 			}
 			
 		});
