@@ -105,9 +105,9 @@ public class Server {
 				Executors.newCachedThreadPool());
 		this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
 
-		MapConfig mapConfig = new MapConfig("HZ-CHANNELS");
-		NearCacheConfig nearCacheConfig = new NearCacheConfig();
-		mapConfig.setNearCacheConfig(nearCacheConfig);
+//		MapConfig mapConfig = new MapConfig("HZ-CHANNELS");
+//		NearCacheConfig nearCacheConfig = new NearCacheConfig();
+//		mapConfig.setNearCacheConfig(nearCacheConfig);
 
 		Config cfg;
 

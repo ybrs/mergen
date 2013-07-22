@@ -1,6 +1,7 @@
 package com.github.mergen.server;
 
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -154,7 +155,10 @@ class Base implements MessageListener<TopicMessage> {
 			e1.printStackTrace();
 			localhostname = "unknown";
 		}
-		String clientname = localhostname + "-" + this.getIdentifier();
+		
+		String n = ManagementFactory.getRuntimeMXBean().getName();
+
+		String clientname = localhostname + "-" + n + "-" + this.getIdentifier();
 		return clientname;
 	}
 
