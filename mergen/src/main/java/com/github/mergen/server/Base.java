@@ -182,7 +182,7 @@ class Base implements MessageListener<TopicMessage> {
 							+ k.db + "::" + k.channelName + "]");
 					// this is namespaced.
 					IMap<String, String> kvstore = client.getMap(k.db + "::"
-							+ "HZ-SUBSCRIBERS-" + k);
+							+ "HZ-SUBSCRIBERS-" + k.channelName);
 					kvstore.remove(k.clientName);
 					// this is also namespaced
 					IMap<String, PubSubChannel> chanstoremap = client
