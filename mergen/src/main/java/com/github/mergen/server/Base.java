@@ -58,6 +58,7 @@ class Base implements MessageListener<TopicMessage> {
 	private Map<String, Controller> pubsublist;
 	private String identifier;
 	public IList<SubscribedChannel> subscribedchannels;
+	public List<SubscribedChannel> clientSubscribedChannels;
 	public String clientIdentifier;
 	public int subscriptioncnt = 0;
 	public String namespace = "default";
@@ -66,28 +67,26 @@ class Base implements MessageListener<TopicMessage> {
 	public void addBoundKey(String map, String key) throws Exception {
 		if (this.boundkeys == null) {
 			// these shouldn't be namespaced
-			String boundKeysMapName = "HZ-BOUNDKEYS-"
-					+ this.client.getClient().getCluster().getLocalMember()
-							.getUuid();
+			String boundKeysMapName = "HZ-BOUNDKEYS-" + this.client.getClient().getCluster().getLocalMember().getUuid();
 			this.boundkeys = this.client.getClient().getMap(boundKeysMapName);
-
-			IMap<String, String> clusterLocks = this.client.getClient().getMap(
-					"HZ-CLUSTER-LOCK");
+			
+			IMap<String, String> clusterLocks = this.client.getClient().getMap("HZ-CLUSTER-LOCK");
 			clusterLocks.set(boundKeysMapName, "1", 0, TimeUnit.SECONDS);
 		}
 
-		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::"
-				+ key;
+		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::" + key;
 		if (!this.boundkeys.containsKey(mkey)) {
-			this.boundkeys.put(mkey,
-					new BoundKey(this.getNamespace(), map, key));
+			this.boundkeys.put(mkey, new BoundKey(this.getNamespace(), map, key));
 		}
 	}
 
 	public void subscribedToChannel(String channelName) {
-		this.subscribedchannels.add(new SubscribedChannel(this.getNamespace(),
+		System.out.println("subscribed to channel - " + this.getClientName() + " - "+ channelName);
+		SubscribedChannel sc = new SubscribedChannel(this.getNamespace(),
 				channelName, this.getClientName(), this.getUniqueChannelName(),
-				this.clientIdentifier));
+				this.clientIdentifier);
+		this.subscribedchannels.add(sc);
+		this.clientSubscribedChannels.add(sc);
 	}
 
 	public String getNamespace() {
@@ -101,10 +100,16 @@ class Base implements MessageListener<TopicMessage> {
 
 	public Base(HZClient client) {
 		this.client = client;
-		// this shouldnt be namespaced.
-		this.subscribedchannels = this.client.getClient().getList(
-				"HZ-SUBSCRIBED-CHANNELS-"
-						+ this.client.getCluster().getLocalMember().getUuid());
+		
+		// we hold all the clients subscribed channels on this,
+		// if this instance goes down, another instance in the cluster
+		// will clear bound keys and subscribed channels, so this shouldn't be namespaced
+		String chanName = "HZ-SUBSCRIBED-CHANNELS-" + this.client.getCluster().getLocalMember().getUuid();
+		System.out.println("---->>>> subscribed chan name " + chanName);
+		this.subscribedchannels = this.client.getClient().getList(chanName);
+		//
+		this.clientSubscribedChannels = new ArrayList<SubscribedChannel>();
+		//
 		this.clientIdentifier = UUID.randomUUID().toString();
 		this.setNamespace("default");
 	}
@@ -162,43 +167,64 @@ class Base implements MessageListener<TopicMessage> {
 				+ this.getIdentifier();
 		return clientname;
 	}
-
+	
 	public void clientDisconnected() {
-		System.out.println("Client Disconnected");
-		this.removeAllListeners();
-		this.removeBoundKeys();
+		System.out.println(">>>> >>>> Client Disconnected");
+//		this.removeAllListeners();
+//		this.removeBoundKeys();
+		
+		// we remove this clients channels
+		for (SubscribedChannel subscribedChannel: clientSubscribedChannels){
+			// this is namespaced.
+			IMap<String, String> kvstore = client.getMap("HZ-SUBSCRIBERS-" + subscribedChannel.channelName);
+			for (String s: kvstore.keySet()){
+				System.out.println(">>> ---- " + s);
+			}
+			kvstore.remove(subscribedChannel.clientName);
+			System.out.println("removed ------>>>>> " + subscribedChannel.clientName);
+		}
 	}
 
-	static public void sremoveAllListeners(String uuid,
-			HazelcastInstance client, Base publisher) {
+	/**
+	 * this is triggered when another instance of hazelcast 
+	 * in the cluster disconnects, so we remove every client
+	 * connected to it.
+	 * @param uuid
+	 * @param client
+	 * @param publisher
+	 */
+	static public void sremoveAllListeners(String uuid, HazelcastInstance client, Base publisher) {
 		IMap<String, String> clusterLocks = client.getMap("HZ-CLUSTER-LOCK");
-		System.out.println("cluster locked - 2");
+		System.out.println("cluster locked - 2 - removing listeners for - " + uuid);
 		if (clusterLocks.tryLock("clusterlock")) {
 			try {
-				IList<SubscribedChannel> subscribedchannels = client
-						.getList("HZ-SUBSCRIBED-CHANNELS-" + uuid);
-				for (SubscribedChannel k : subscribedchannels) {
-					System.out.println("Disconnected - removing listener ["
-							+ k.db + "::" + k.channelName + "]");
+				IList<SubscribedChannel> subscribedchannels = client.getList("HZ-SUBSCRIBED-CHANNELS-" + uuid);
+				for (SubscribedChannel subscribedChannel : subscribedchannels) {
+					System.out.println("Disconnected - removing listener ["+ subscribedChannel.db + "::" + subscribedChannel.channelName + " - "+uuid+"]");
+					
+					
 					// this is namespaced.
-					IMap<String, String> kvstore = client.getMap(k.db + "::"
-							+ "HZ-SUBSCRIBERS-" + k.channelName);
-					kvstore.remove(k.clientName);
+					IMap<String, String> kvstore = client.getMap(subscribedChannel.db + "::" + "HZ-SUBSCRIBERS-" + subscribedChannel.channelName);
+					for (String s: kvstore.keySet()){
+						System.out.println(">>> ---- " + s);
+					}
+					kvstore.remove(subscribedChannel.clientName);
+					System.out.println("removed ------>>>>> " + subscribedChannel.clientName);
+					
 					// this is also namespaced
-					IMap<String, PubSubChannel> chanstoremap = client
-							.getMap(k.db + "::HZ-CHANNELS");
-					PubSubChannel chan = chanstoremap.get(k.channelName);
+					IMap<String, PubSubChannel> chanstoremap = client.getMap(subscribedChannel.db + "::HZ-CHANNELS");
+					PubSubChannel chan = chanstoremap.get(subscribedChannel.channelName);
 					if (chan != null) {
-						chan.removeClient(k.uniqueChannelName);
-						chanstoremap.set(k.channelName, chan, 0,
+						chan.removeClient(subscribedChannel.uniqueChannelName);
+						chanstoremap.set(subscribedChannel.channelName, chan, 0,
 								TimeUnit.SECONDS);
 					}
 
 					publisher.publish("HZ-EVENTS",
 							"{'eventtype':'disconnect', " + "'channel':'"
-									+ k.channelName + "', " + "'clientname':'"
-									+ k.clientName + "'," + "'identifier':'"
-									+ k.clientIdentifier + "'}");
+									+ subscribedChannel.channelName + "', " + "'clientname':'"
+									+ subscribedChannel.clientName + "'," + "'identifier':'"
+									+ subscribedChannel.clientIdentifier + "'}");
 				}
 				// client is disconnected so nothing left subscribed...
 				subscribedchannels.clear();
@@ -212,6 +238,13 @@ class Base implements MessageListener<TopicMessage> {
 		}
 	}
 
+	
+	/**
+	 * this is triggered, when another hazelcast instance in the cluster
+	 * gets disconnected, we cleanup every client that is connected to it
+	 * @param uuid
+	 * @param client
+	 */
 	static public void sremoveBoundkeys(String uuid, HazelcastInstance client) {
 		System.out.println("removing bound keys");
 		// we dont want these maps to be namespaced.
