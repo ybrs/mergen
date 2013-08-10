@@ -63,7 +63,9 @@ class Base implements MessageListener<TopicMessage> {
 	public int subscriptioncnt = 0;
 	public String namespace = "default";
 	public IMap<String, BoundKey> boundkeys;
-
+	public List<BoundKey> clientBoundKeys; 
+	
+	
 	public void addBoundKey(String map, String key) throws Exception {
 		if (this.boundkeys == null) {
 			// these shouldn't be namespaced
@@ -76,7 +78,9 @@ class Base implements MessageListener<TopicMessage> {
 
 		String mkey = "map:::" + this.getNamespace() + ":::" + map + ":::" + key;
 		if (!this.boundkeys.containsKey(mkey)) {
-			this.boundkeys.put(mkey, new BoundKey(this.getNamespace(), map, key));
+			BoundKey bk = new BoundKey(this.getNamespace(), map, key);
+			this.boundkeys.put(mkey, bk);
+			this.clientBoundKeys.add(bk);
 		}
 	}
 
@@ -109,6 +113,7 @@ class Base implements MessageListener<TopicMessage> {
 		this.subscribedchannels = this.client.getClient().getList(chanName);
 		//
 		this.clientSubscribedChannels = new ArrayList<SubscribedChannel>();
+		this.clientBoundKeys = new ArrayList<BoundKey>();
 		//
 		this.clientIdentifier = UUID.randomUUID().toString();
 		this.setNamespace("default");
@@ -183,6 +188,13 @@ class Base implements MessageListener<TopicMessage> {
 			kvstore.remove(subscribedChannel.clientName);
 			System.out.println("removed ------>>>>> " + subscribedChannel.clientName);
 		}
+		
+		// we remove all bound keys
+		for (BoundKey bk: clientBoundKeys){
+			IMap<String, String> hzmap = client.getMap(bk.db + "::" + bk.map);
+			hzmap.remove(bk.key);
+		}
+		
 	}
 
 	/**
