@@ -181,19 +181,34 @@ class Base implements MessageListener<TopicMessage> {
 		// we remove this clients channels
 		for (SubscribedChannel subscribedChannel: clientSubscribedChannels){
 			// this is namespaced.
+			// TODO: add db !!!
 			IMap<String, String> kvstore = client.getMap("HZ-SUBSCRIBERS-" + subscribedChannel.channelName);
 			for (String s: kvstore.keySet()){
 				System.out.println(">>> ---- " + s);
 			}
 			kvstore.remove(subscribedChannel.clientName);
 			System.out.println("removed ------>>>>> " + subscribedChannel.clientName);
+		
+			// this is also namespaced
+			IMap<String, PubSubChannel> chanstoremap = client.getClient().getMap(subscribedChannel.db + "::HZ-CHANNELS");
+			PubSubChannel chan = chanstoremap.get(subscribedChannel.channelName);
+			if (chan != null) {
+				chan.removeClient(subscribedChannel.uniqueChannelName);
+				chanstoremap.set(subscribedChannel.channelName, chan, 0,
+						TimeUnit.SECONDS);
+			}
+
 		}
 		
 		// we remove all bound keys
+		System.out.println("removing bound keys --- ");
 		for (BoundKey bk: clientBoundKeys){
-			IMap<String, String> hzmap = client.getMap(bk.db + "::" + bk.map);
+			System.out.println("removing bound keys --- " + bk.db + "-" + bk.map + " - " + bk.key);
+			IMap<String, String> hzmap = client.getClient().getMap(bk.db + "::" + bk.map);
 			hzmap.remove(bk.key);
 		}
+		
+
 		
 	}
 

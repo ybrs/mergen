@@ -84,7 +84,6 @@ public class MapCommands extends Controller {
 	public void hincrby(MessageEvent e, Object[] args) {
 		String map = new String((byte[]) args[1]);
 		String k = new String((byte[]) args[2]);
-
 		int by = Integer.parseInt(new String((byte[]) args[3]));
 		IMap<String, String> kvstore = base.client.getMap(map);
 		Object v = kvstore.get(k);

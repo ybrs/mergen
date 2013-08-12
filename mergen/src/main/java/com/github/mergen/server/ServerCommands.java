@@ -1,6 +1,7 @@
 package com.github.mergen.server;
 
 import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.HazelcastInstance;
 
@@ -34,8 +35,33 @@ public class ServerCommands extends Controller {
 	public void db(MessageEvent e, Object[] args) {
 		String namespace = new String((byte[]) args[1]);
 		this.base.setNamespace(namespace);
+		// this is not namespaced.
+		IList<String> list = base.client.getClient().getList("HZ-DATABASES");
+		if (!list.contains(namespace)){
+			list.add(namespace);
+		}
 	}
 
+	@RedisCommand(cmd = "DATABASES")
+	public void databases(MessageEvent e, Object[] args) {
+		IList<String> list = base.client.getClient().getList("HZ-DATABASES");
+		
+		ServerReply sr = new ServerReply();
+		ServerReply.MultiReply mr = sr.startMultiReply();
+		Iterator<String> it = list.iterator();
+		while (it.hasNext()) { 
+		    String val = (String) it.next(); 
+			if (val == null) {
+				mr.addNull();
+			} else {
+				mr.addString(val);
+			}
+		}
+		mr.finish();
+		e.getChannel().write(mr.getBuffer());		
+	}
+
+	
 	
 	@RedisCommand(cmd = "SET", returns = "OK")
 	public void set(MessageEvent e, Object[] args) {
@@ -103,7 +129,6 @@ public class ServerCommands extends Controller {
 	@RedisCommand(cmd = "KEYS")
 	public void keys(MessageEvent e, Object[] args) {
 		// this is half baked
-		String k = new String((byte[]) args[1]);
 		IMap<String, String> kvstore = base.client.getMap(kvstorename);
 		Set<String> keys = kvstore.keySet();
 		String[] array = keys.toArray(new String[0]);
